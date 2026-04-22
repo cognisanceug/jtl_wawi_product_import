@@ -1,0 +1,11 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_jtl_import_run_user,jtl.import.run.user,model_jtl_import_run,base.group_user,1,1,1,0
+access_jtl_import_run_manager,jtl.import.run.manager,model_jtl_import_run,base.group_system,1,1,1,1
+access_jtl_import_log_user,jtl.import.log.user,model_jtl_import_log,base.group_user,1,0,0,0
+access_jtl_import_log_manager,jtl.import.log.manager,model_jtl_import_log,base.group_system,1,1,1,1
+access_jtl_import_mapping_user,jtl.import.mapping.user,model_jtl_import_mapping,base.group_user,1,0,0,0
+access_jtl_import_mapping_manager,jtl.import.mapping.manager,model_jtl_import_mapping,base.group_system,1,1,1,1
+access_jtl_import_profile_user,jtl.import.profile.user,model_jtl_import_profile,base.group_user,1,1,1,1
+access_jtl_import_profile_line_user,jtl.import.profile.line.user,model_jtl_import_profile_line,base.group_user,1,1,1,1
+access_jtl_import_wizard_user,jtl.import.wizard.user,model_jtl_import_wizard,base.group_user,1,1,1,1
+access_jtl_import_wizard_line_user,jtl.import.wizard.line.user,model_jtl_import_wizard_line,base.group_user,1,1,1,1

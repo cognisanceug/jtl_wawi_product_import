@@ -1,0 +1,21 @@
+{
+    "name": "JTL-Wawi Product Import",
+    "version": "19.0.1.0.0",
+    "category": "Inventory",
+    "summary": "Import products from JTL-Wawi CSV files with staged background processing.",
+    "depends": ["account", "mail", "product", "purchase_stock", "stock"],
+    "data": [
+        "security/ir.model.access.csv",
+        "data/jtl_import_sequence.xml",
+        "data/jtl_import_mapping_data.xml",
+        "data/jtl_import_cron.xml",
+        "views/jtl_import_mapping_views.xml",
+        "views/jtl_import_profile_views.xml",
+        "views/jtl_import_run_views.xml",
+        "views/product_views.xml",
+        "wizard/jtl_import_wizard_views.xml",
+    ],
+    "license": "OPL-1",
+    "installable": True,
+    "application": True,
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_jtl_import_wizard_form" model="ir.ui.view">
+        <field name="name">jtl.import.wizard.form</field>
+        <field name="model">jtl.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import JTL CSV">
+                <group>
+                    <group>
+                        <field name="file_name"/>
+                        <field name="file_data" filename="file_name"/>
+                        <field name="profile_id"/>
+                        <field name="batch_size"/>
+                        <field name="dry_run"/>
+                        <field name="headers_loaded" readonly="1"/>
+                    </group>
+                    <group>
+                        <field name="import_stock"/>
+                        <field name="import_images"/>
+                        <field name="import_gallery_images"/>
+                        <field name="import_seo"/>
+                        <field name="save_profile"/>
+                        <field name="profile_name" invisible="not save_profile"/>
+                    </group>
+                </group>
+                <group string="CSV Field Mapping">
+                    <field name="mapping_line_ids">
+                        <list editable="bottom">
+                            <field name="sequence" optional="hide"/>
+                            <field name="active"/>
+                            <field name="source_column"/>
+                            <field name="target_model"/>
+                            <field name="target_field_id" options="{'no_create': True}"/>
+                            <field name="target_field_name"/>
+                            <field name="create_field_if_missing"/>
+                            <field name="custom_field_ttype"/>
+                            <field name="language_code"/>
+                            <field name="transform_logic"/>
+                            <field name="required"/>
+                            <field name="default_value"/>
+                        </list>
+                    </field>
+                </group>
+                <footer>
+                    <button name="action_load_columns" type="object" string="Load CSV Fields" class="btn-secondary"/>
+                    <button name="action_apply_profile" type="object" string="Apply Profile" class="btn-secondary" invisible="not profile_id"/>
+                    <button name="action_validate" type="object" string="Validate" class="btn-secondary"/>
+                    <button name="action_validate_and_queue" type="object" string="Validate and Queue" class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_jtl_import_wizard" model="ir.actions.act_window">
+        <field name="name">New JTL Import</field>
+        <field name="res_model">jtl.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_jtl_import_wizard" name="New Import" parent="jtl_wawi_product_import.menu_jtl_import_root" action="action_jtl_import_wizard" sequence="5"/>
+</odoo>

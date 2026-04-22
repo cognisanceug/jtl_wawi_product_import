@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="jtl_mapping_sku" model="jtl.import.mapping">
+            <field name="name">SKU</field>
+            <field name="sequence">10</field>
+            <field name="source_column">Artikelnummer</field>
+            <field name="target_model">product.product</field>
+            <field name="target_field">default_code</field>
+            <field name="required">1</field>
+        </record>
+        <record id="jtl_mapping_name_de" model="jtl.import.mapping">
+            <field name="name">Name DE</field>
+            <field name="sequence">20</field>
+            <field name="source_column">Name (DE)</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">name</field>
+            <field name="language_code">de_DE</field>
+        </record>
+        <record id="jtl_mapping_name_en" model="jtl.import.mapping">
+            <field name="name">Name EN</field>
+            <field name="sequence">21</field>
+            <field name="source_column">Name (EN)</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">name</field>
+            <field name="language_code">en_US</field>
+        </record>
+        <record id="jtl_mapping_description_de" model="jtl.import.mapping">
+            <field name="name">Description DE</field>
+            <field name="sequence">30</field>
+            <field name="source_column">Beschreibung (DE)</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">description</field>
+            <field name="language_code">de_DE</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_description_en" model="jtl.import.mapping">
+            <field name="name">Description EN</field>
+            <field name="sequence">31</field>
+            <field name="source_column">Beschreibung (EN)</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">description</field>
+            <field name="language_code">en_US</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_short_description_de" model="jtl.import.mapping">
+            <field name="name">Short Description DE</field>
+            <field name="sequence">40</field>
+            <field name="source_column">Kurzbeschreibung (DE)</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">short_description</field>
+            <field name="language_code">de_DE</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_short_description_en" model="jtl.import.mapping">
+            <field name="name">Short Description EN</field>
+            <field name="sequence">41</field>
+            <field name="source_column">Kurzbeschreibung (EN)</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">short_description</field>
+            <field name="language_code">en_US</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_gtin" model="jtl.import.mapping">
+            <field name="name">GTIN</field>
+            <field name="sequence">50</field>
+            <field name="source_column">GTIN/EAN</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">barcode</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_sku" model="jtl.import.mapping">
+            <field name="name">Manufacturer SKU</field>
+            <field name="sequence">60</field>
+            <field name="source_column">HAN</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">manufacturer_sku</field>
+        </record>
+        <record id="jtl_mapping_weight" model="jtl.import.mapping">
+            <field name="name">Weight</field>
+            <field name="sequence">70</field>
+            <field name="source_column">Gewicht</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">weight</field>
+            <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_active" model="jtl.import.mapping">
+            <field name="name">Active</field>
+            <field name="sequence">80</field>
+            <field name="source_column">Aktiv</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">active</field>
+            <field name="transform_logic">boolean</field>
+        </record>
+        <record id="jtl_mapping_seo_path" model="jtl.import.mapping">
+            <field name="name">SEO Path</field>
+            <field name="sequence">90</field>
+            <field name="source_column">SEO Pfad</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">seo_path</field>
+            <field name="transform_logic">path</field>
+        </record>
+        <record id="jtl_mapping_country_of_origin" model="jtl.import.mapping">
+            <field name="name">Country of Origin</field>
+            <field name="sequence">100</field>
+            <field name="source_column">Ursprungsland</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">country_of_origin</field>
+        </record>
+        <record id="jtl_mapping_taric_code" model="jtl.import.mapping">
+            <field name="name">TARIC Code</field>
+            <field name="sequence">110</field>
+            <field name="source_column">TARIC</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">taric_code</field>
+        </record>
+        <record id="jtl_mapping_gross_sales_price" model="jtl.import.mapping">
+            <field name="name">Gross Sales Price</field>
+            <field name="sequence">120</field>
+            <field name="source_column">Bruttopreis</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">gross_sales_price</field>
+            <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_purchase_price" model="jtl.import.mapping">
+            <field name="name">Purchase Price</field>
+            <field name="sequence">130</field>
+            <field name="source_column">Einkaufspreis</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">purchase_price</field>
+            <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_tax_rate" model="jtl.import.mapping">
+            <field name="name">Tax Rate</field>
+            <field name="sequence">140</field>
+            <field name="source_column">Steuersatz</field>
+            <field name="target_model">account.tax</field>
+            <field name="target_field">tax_rate</field>
+            <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_category_path" model="jtl.import.mapping">
+            <field name="name">Category Path</field>
+            <field name="sequence">150</field>
+            <field name="source_column">Kategorie</field>
+            <field name="target_model">product.category</field>
+            <field name="target_field">category_path</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_name" model="jtl.import.mapping">
+            <field name="name">Manufacturer Name</field>
+            <field name="sequence">160</field>
+            <field name="source_column">Hersteller</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">manufacturer_name</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_email" model="jtl.import.mapping">
+            <field name="name">Manufacturer Email</field>
+            <field name="sequence">170</field>
+            <field name="source_column">Hersteller E-Mail</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">manufacturer_email</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_website" model="jtl.import.mapping">
+            <field name="name">Manufacturer Website</field>
+            <field name="sequence">180</field>
+            <field name="source_column">Hersteller Website</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">manufacturer_website</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_external_id" model="jtl.import.mapping">
+            <field name="name">Manufacturer External ID</field>
+            <field name="sequence">190</field>
+            <field name="source_column">Hersteller ID</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">manufacturer_external_id</field>
+        </record>
+        <record id="jtl_mapping_supplier_name" model="jtl.import.mapping">
+            <field name="name">Supplier Name</field>
+            <field name="sequence">200</field>
+            <field name="source_column">Lieferant</field>
+            <field name="target_model">product.supplierinfo</field>
+            <field name="target_field">supplier_name</field>
+        </record>
+        <record id="jtl_mapping_supplier_product_number" model="jtl.import.mapping">
+            <field name="name">Supplier Product Number</field>
+            <field name="sequence">210</field>
+            <field name="source_column">Lieferantenartikelnummer</field>
+            <field name="target_model">product.supplierinfo</field>
+            <field name="target_field">supplier_product_number</field>
+        </record>
+        <record id="jtl_mapping_supplier_purchase_price" model="jtl.import.mapping">
+            <field name="name">Supplier Purchase Price</field>
+            <field name="sequence">220</field>
+            <field name="source_column">Lieferantenpreis</field>
+            <field name="target_model">product.supplierinfo</field>
+            <field name="target_field">purchase_price</field>
+            <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_supplier_lead_time" model="jtl.import.mapping">
+            <field name="name">Supplier Lead Time</field>
+            <field name="sequence">230</field>
+            <field name="source_column">Lieferzeit</field>
+            <field name="target_model">product.supplierinfo</field>
+            <field name="target_field">lead_time</field>
+            <field name="transform_logic">integer</field>
+        </record>
+        <record id="jtl_mapping_supplier_minimum_quantity" model="jtl.import.mapping">
+            <field name="name">Supplier Min Qty</field>
+            <field name="sequence">240</field>
+            <field name="source_column">Mindestmenge</field>
+            <field name="target_model">product.supplierinfo</field>
+            <field name="target_field">minimum_quantity</field>
+            <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_default_supplier" model="jtl.import.mapping">
+            <field name="name">Default Supplier</field>
+            <field name="sequence">250</field>
+            <field name="source_column">Standardlieferant</field>
+            <field name="target_model">product.supplierinfo</field>
+            <field name="target_field">default_supplier</field>
+            <field name="transform_logic">boolean</field>
+        </record>
+        <record id="jtl_mapping_is_parent" model="jtl.import.mapping">
+            <field name="name">Is Parent</field>
+            <field name="sequence">260</field>
+            <field name="source_column">Ist Vaterartikel</field>
+            <field name="target_model">product.product</field>
+            <field name="target_field">is_parent</field>
+            <field name="transform_logic">boolean</field>
+        </record>
+        <record id="jtl_mapping_parent_sku" model="jtl.import.mapping">
+            <field name="name">Parent SKU</field>
+            <field name="sequence">270</field>
+            <field name="source_column">Vaterartikelnummer</field>
+            <field name="target_model">product.product</field>
+            <field name="target_field">parent_sku</field>
+        </record>
+        <record id="jtl_mapping_variant_attribute_name_1" model="jtl.import.mapping">
+            <field name="name">Variant Attribute 1 Name</field>
+            <field name="sequence">280</field>
+            <field name="source_column">Variantenname 1</field>
+            <field name="target_model">product.product</field>
+            <field name="target_field">variant_attribute_1_name</field>
+        </record>
+        <record id="jtl_mapping_variant_attribute_value_1" model="jtl.import.mapping">
+            <field name="name">Variant Attribute 1 Value</field>
+            <field name="sequence">281</field>
+            <field name="source_column">Variantenwert 1</field>
+            <field name="target_model">product.product</field>
+            <field name="target_field">variant_attribute_1_value</field>
+        </record>
+        <record id="jtl_mapping_variant_attribute_name_2" model="jtl.import.mapping">
+            <field name="name">Variant Attribute 2 Name</field>
+            <field name="sequence">282</field>
+            <field name="source_column">Variantenname 2</field>
+            <field name="target_model">product.product</field>
+            <field name="target_field">variant_attribute_2_name</field>
+        </record>
+        <record id="jtl_mapping_variant_attribute_value_2" model="jtl.import.mapping">
+            <field name="name">Variant Attribute 2 Value</field>
+            <field name="sequence">283</field>
+            <field name="source_column">Variantenwert 2</field>
+            <field name="target_model">product.product</field>
+            <field name="target_field">variant_attribute_2_value</field>
+        </record>
+        <record id="jtl_mapping_image_url" model="jtl.import.mapping">
+            <field name="name">Image URL</field>
+            <field name="sequence">290</field>
+            <field name="source_column">Bild URL</field>
+            <field name="target_model">product.image</field>
+            <field name="target_field">image_url</field>
+        </record>
+        <record id="jtl_mapping_stock_quantity" model="jtl.import.mapping">
+            <field name="name">Stock Quantity</field>
+            <field name="sequence">300</field>
+            <field name="source_column">Bestand</field>
+            <field name="target_model">stock.quant</field>
+            <field name="target_field">quantity</field>
+            <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_stock_location" model="jtl.import.mapping">
+            <field name="name">Stock Location</field>
+            <field name="sequence">310</field>
+            <field name="source_column">Lager</field>
+            <field name="target_model">stock.quant</field>
+            <field name="target_field">location</field>
+        </record>
+        <record id="jtl_mapping_meta_title_de" model="jtl.import.mapping">
+            <field name="name">Meta Title DE</field>
+            <field name="sequence">320</field>
+            <field name="source_column">Meta Title (DE)</field>
+            <field name="target_model">website</field>
+            <field name="target_field">meta_title</field>
+            <field name="language_code">de_DE</field>
+        </record>
+        <record id="jtl_mapping_meta_description_de" model="jtl.import.mapping">
+            <field name="name">Meta Description DE</field>
+            <field name="sequence">330</field>
+            <field name="source_column">Meta Description (DE)</field>
+            <field name="target_model">website</field>
+            <field name="target_field">meta_description</field>
+            <field name="language_code">de_DE</field>
+        </record>
+        <record id="jtl_mapping_website_published" model="jtl.import.mapping">
+            <field name="name">Website Published</field>
+            <field name="sequence">340</field>
+            <field name="source_column">Im Shop sichtbar</field>
+            <field name="target_model">website</field>
+            <field name="target_field">website_published</field>
+            <field name="transform_logic">boolean</field>
+        </record>
+    </data>
+</odoo>

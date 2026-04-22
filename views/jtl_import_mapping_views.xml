@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_jtl_import_mapping_tree" model="ir.ui.view">
+        <field name="name">jtl.import.mapping.tree</field>
+        <field name="model">jtl.import.mapping</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence"/>
+                <field name="name"/>
+                <field name="source_column"/>
+                <field name="target_model"/>
+                <field name="target_field"/>
+                <field name="language_code"/>
+                <field name="transform_logic"/>
+                <field name="required"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_jtl_import_mapping_form" model="ir.ui.view">
+        <field name="name">jtl.import.mapping.form</field>
+        <field name="model">jtl.import.mapping</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="source_column"/>
+                            <field name="target_model"/>
+                            <field name="target_field"/>
+                        </group>
+                        <group>
+                            <field name="language_code"/>
+                            <field name="transform_logic"/>
+                            <field name="default_value"/>
+                            <field name="required"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_jtl_import_mapping" model="ir.actions.act_window">
+        <field name="name">Field Mappings</field>
+        <field name="res_model">jtl.import.mapping</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
+
