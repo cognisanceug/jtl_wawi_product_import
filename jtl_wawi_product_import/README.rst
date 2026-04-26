@@ -30,4 +30,4 @@ Hinweise
 
 * Das Modul ist für Odoo 19.0 ausgelegt.
 * Bereits vorhandene doppelte Barcodes werden ignoriert, sofern ``Barcode Match Update`` nicht aktiviert ist.
-* Technische Legacy-Felder für GDPR-Kompatibilität bleiben im Modell erhalten, die Oberfläche verwendet jedoch nur noch ``EU Responsible``.
+* Herstellerdaten und EU-RP-Daten werden als Marken gemappt und bei Bedarf automatisch mit angelegt.

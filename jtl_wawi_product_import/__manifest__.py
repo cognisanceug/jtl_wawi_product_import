@@ -13,6 +13,7 @@ Features:
 - Barcode-Konfliktbehandlung mit Modus für Aktualisieren oder Überspringen.
 - Verknüpfung von Eltern- und Kindartikeln, Synchronisierung von Lieferanteninfos, Marken, SEO-Feldern und Dimensionen zu Volumen.
 - Hintergrundverarbeitung in Batches mit Protokollen und Import-Historie.
+- Herstellerdaten und EU-RP-Daten werden als Marken gemappt und bei Bedarf automatisch mit angelegt.
 """,
     "depends": ["account", "contacts", "mail", "product", "purchase_stock", "stock"],
     "data": [
