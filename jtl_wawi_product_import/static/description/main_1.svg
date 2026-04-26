@@ -47,9 +47,9 @@
     Auto Mapping
   </text>
 
-  <rect x="836" y="320" width="180" height="52" rx="16" fill="#edf9f1"/>
-  <text x="926" y="353" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="700" fill="#1f7a47">
-    EU Responsible
+  <rect x="836" y="320" width="230" height="52" rx="16" fill="#edf9f1"/>
+  <text x="951" y="353" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="700" fill="#1f7a47">
+    Manufacturer + EU RP
   </text>
 
   <rect x="520" y="408" width="584" height="164" rx="24" fill="url(#accentSoft)" stroke="#dde5f2"/>
