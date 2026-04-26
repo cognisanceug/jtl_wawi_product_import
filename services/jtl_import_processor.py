@@ -13,10 +13,23 @@ class JtlImportProcessor(models.AbstractModel):
     _name = "jtl.import.processor"
     _description = "JTL Import Processor"
 
+    def _log_skip_create(self, logs, article_number, field_name, message):
+        logs.append(
+            {
+                "article_number": article_number,
+                "field_name": field_name,
+                "level": "warning",
+                "message": message,
+            }
+        )
+
     def _get_empty_caches(self):
         return {
             "manufacturer": {},
+            "eu_responsible": {},
+            "brand": {},
             "category": {},
+            "public_category": {},
             "attribute": {},
             "attribute_value": {},
             "tax": {},
@@ -27,10 +40,62 @@ class JtlImportProcessor(models.AbstractModel):
             "product": {},
         }
 
+    def _normalize_barcode_value(self, barcode):
+        if barcode in (None, False):
+            return False
+        normalized = str(barcode).strip()
+        if not normalized or normalized == "0":
+            return False
+        return normalized
+
+    def _resolve_unique_barcode(self, run, sku, barcode, logs, current_products=None):
+        normalized = self._normalize_barcode_value(barcode)
+        if not normalized:
+            return False
+        product_model = self.env["product.product"].sudo().with_company(run.company_id)
+        domain = [
+            ("barcode", "=", normalized),
+            "|",
+            ("company_id", "=", False),
+            ("company_id", "=", run.company_id.id),
+        ]
+        conflicts = product_model.search(domain)
+        if current_products:
+            current_ids = set(current_products.ids)
+            conflicts = conflicts.filtered(lambda product: product.id not in current_ids)
+        if conflicts:
+            conflict_names = ", ".join(conflicts[:3].mapped("display_name"))
+            self._log_skip_create(
+                logs,
+                sku,
+                "barcode",
+                _("Barcode %s was ignored because it is already assigned to: %s") % (normalized, conflict_names),
+            )
+            return False
+        return normalized
+
+    def _find_product_by_barcode(self, run, barcode):
+        normalized = self._normalize_barcode_value(barcode)
+        if not normalized:
+            return False
+        product_model = self.env["product.product"].sudo().with_company(run.company_id)
+        return product_model.search(
+            [
+                ("barcode", "=", normalized),
+                "|",
+                ("company_id", "=", False),
+                ("company_id", "=", run.company_id.id),
+            ],
+            limit=1,
+        )
+
     def process_run_batch(self, run):
+        self = self.with_context(update_existing_only=bool(run.update_existing_only))
         payload = run.get_payload()
         skus = payload.get("skus", [])
         products = payload.get("products", {})
+        manufacturers = payload.get("manufacturers", [])
+        eu_responsibles = payload.get("eu_responsibles", [])
         if not skus:
             run.write({"state": "failed", "last_error": _("No staged products were found for processing.")})
             return False
@@ -48,6 +113,9 @@ class JtlImportProcessor(models.AbstractModel):
             "created_variants": 0,
         }
         all_logs = []
+
+        all_logs.extend(self._process_manufacturer_master_data(run, manufacturers, caches))
+        all_logs.extend(self._process_eu_responsible_master_data(run, eu_responsibles, caches))
 
         for sku in batch_skus:
             try:
@@ -86,18 +154,43 @@ class JtlImportProcessor(models.AbstractModel):
     def _prepare_lookup_caches(self, run):
         caches = self._get_empty_caches()
         manufacturer_model = self.env["res.partner"]
-        manufacturers = manufacturer_model.search([("is_jtl_manufacturer", "=", True)])
+        manufacturer_domain = [("is_manufacturer", "=", True)]
+        if "is_manufacturer" in manufacturer_model._fields:
+            manufacturer_domain = [("is_manufacturer", "=", True)]
+        manufacturers = manufacturer_model.search(manufacturer_domain)
         for partner in manufacturers:
-            caches["manufacturer"][("name", partner.jtl_normalized_name)] = partner
+            caches["manufacturer"][("name", partner.normalized_name)] = partner
             if partner.email:
                 caches["manufacturer"][("email", partner.email.strip().lower())] = partner
             if partner.website:
                 caches["manufacturer"][("website", partner.website.strip().lower())] = partner
-            if partner.jtl_manufacturer_external_id:
-                caches["manufacturer"][("external_id", partner.jtl_manufacturer_external_id)] = partner
+            if partner.manufacturer_external_id:
+                caches["manufacturer"][("external_id", partner.manufacturer_external_id)] = partner
+        eu_domain = [("is_eu_responsible", "=", True)]
+        eu_responsibles = manufacturer_model.search(eu_domain)
+        for partner in eu_responsibles:
+            caches["eu_responsible"][("name", partner.normalized_name)] = partner
+            if partner.email:
+                caches["eu_responsible"][("email", partner.email.strip().lower())] = partner
+            if partner.website:
+                caches["eu_responsible"][("website", partner.website.strip().lower())] = partner
+            if partner.eu_responsible_external_id:
+                caches["eu_responsible"][("external_id", partner.eu_responsible_external_id)] = partner
+        if "product.brand" in self.env:
+            for brand in self.env["product.brand"].search([]):
+                caches["brand"][("name", (brand.name or "").strip().lower())] = brand
+                if getattr(brand, "brand_external_id", False):
+                    caches["brand"][("external_id", brand.brand_external_id)] = brand
         for categ in self.env["product.category"].search([]):
             path = " / ".join(categ.complete_name.split("/")).strip()
             caches["category"][path.lower()] = categ
+        if "product.public.category" in self.env:
+            for categ in self.env["product.public.category"].search([]):
+                path = " / ".join(categ.parent_path_names()).strip() if hasattr(categ, "parent_path_names") else False
+                if not path:
+                    path = self._build_public_category_path(categ)
+                if path:
+                    caches["public_category"][path.lower()] = categ
         tax_model = self.env["account.tax"].with_company(run.company_id)
         for tax in tax_model.search([("company_id", "=", run.company_id.id), ("type_tax_use", "=", "sale")]):
             caches["tax"][round(tax.amount, 4)] = tax
@@ -147,11 +240,21 @@ class JtlImportProcessor(models.AbstractModel):
             }
 
         template, created = self._upsert_template_product(run, product_payload, caches, logs, batch_number, is_parent=is_parent)
+        if not template:
+            return {
+                "created_products": 0,
+                "updated_products": 0,
+                "created_variants": 0,
+                "created_suppliers": 0,
+                "updated_suppliers": 0,
+                "logs": logs,
+            }
         self._apply_translations(template, translations)
         self._process_suppliers(run, template, product_payload.get("suppliers", []), caches, logs, sku)
         self._process_images(run, template, product_payload.get("images", []), logs)
         if run.import_stock:
             self._process_stock(template, product_payload.get("stock", []), caches, logs, sku)
+        self._process_bom(template, product_payload.get("bom", []), caches, logs, sku)
         if run.import_seo:
             self._process_seo(template, product_payload.get("seo", {}), logs)
         return {
@@ -169,30 +272,60 @@ class JtlImportProcessor(models.AbstractModel):
             }] if is_parent else []),
         }
 
-    def _prepare_template_vals(self, run, product_payload, caches, logs):
+    def _prepare_template_vals(self, run, product_payload, caches, logs, current_products=None):
         values = product_payload.get("product", {})
         sku = product_payload.get("sku")
+        raw_rows = product_payload.get("rows") or []
+        first_row = raw_rows[0] if raw_rows else {}
+        fallback_name = (
+            values.get("name")
+            or first_row.get("Artikelname")
+            or first_row.get("Kind Artikelname")
+            or first_row.get("Artikelname (Lieferant)")
+            or sku
+        )
         template_model_data = product_payload.get("model_data", {}).get("product.template", {})
         template_vals = {
-            "name": values.get("name") or sku,
+            "name": fallback_name,
             "default_code": sku if "default_code" in self.env["product.template"]._fields else False,
-            "barcode": values.get("barcode"),
+            "barcode": self._resolve_unique_barcode(
+                run,
+                sku,
+                values.get("barcode"),
+                logs,
+                current_products=current_products,
+            ),
             "weight": values.get("weight") or 0.0,
+            "length": values.get("length") or 0.0,
+            "width": values.get("width") or 0.0,
+            "height": values.get("height") or 0.0,
             "active": values.get("active") if "active" in values else True,
             "manufacturer_sku": values.get("manufacturer_sku"),
-            "jtl_parent_sku": values.get("parent_sku") or sku,
-            "jtl_seo_path": values.get("seo_path"),
-            "jtl_taric_code": values.get("taric_code"),
-            "jtl_short_description": values.get("short_description"),
-            "jtl_description_html": values.get("description"),
+            "parent_sku": values.get("parent_sku") or sku,
+            "seo_path": values.get("seo_path"),
             "standard_price": values.get("purchase_price") or 0.0,
         }
+        if "description_sale" in self.env["product.template"]._fields:
+            template_vals["description_sale"] = values.get("short_description") or values.get("description")
+        if "website_description" in self.env["product.template"]._fields and values.get("description"):
+            template_vals["website_description"] = values.get("description")
+        elif "description" in self.env["product.template"]._fields and values.get("description"):
+            template_vals["description"] = values.get("description")
         category = self._find_or_create_category(values.get("category_path"), caches)
         if category:
             template_vals["categ_id"] = category.id
         manufacturer = self._find_or_create_manufacturer(values, caches)
         if manufacturer:
             template_vals["manufacturer_partner_id"] = manufacturer.id
+            if "manufacturer_id" in self.env["product.template"]._fields:
+                template_vals["manufacturer_id"] = manufacturer.id
+        eu_responsible = self._find_or_create_eu_responsible(values, caches)
+        if eu_responsible:
+            if "eu_responsible_partner_id" in self.env["product.template"]._fields:
+                template_vals["eu_responsible_partner_id"] = eu_responsible.id
+        brand = self._find_or_create_brand(values, manufacturer, eu_responsible, caches)
+        if brand and "brand_id" in self.env["product.template"]._fields:
+            template_vals["brand_id"] = brand.id
         tax = self._map_sale_tax(run, values.get("tax_rate"), caches, logs, sku)
         if tax:
             template_vals["taxes_id"] = [(6, 0, tax.ids)]
@@ -203,6 +336,11 @@ class JtlImportProcessor(models.AbstractModel):
         country = self._find_country(values.get("country_of_origin"), caches)
         if country and "country_of_origin" in self.env["product.template"]._fields:
             template_vals["country_of_origin"] = country.id
+        if values.get("taric_code") and "hs_code" in self.env["product.template"]._fields:
+            template_vals["hs_code"] = values.get("taric_code")
+        website_category = self._find_or_create_public_category(product_payload, caches)
+        if website_category and "public_categ_ids" in self.env["product.template"]._fields:
+            template_vals["public_categ_ids"] = [(4, website_category.id)]
         template_vals.update(
             self._extract_dynamic_fields(
                 "product.template",
@@ -211,13 +349,28 @@ class JtlImportProcessor(models.AbstractModel):
                     "name",
                     "barcode",
                     "weight",
+                    "length",
+                    "width",
+                    "height",
+                    "volume",
                     "active",
                     "manufacturer_sku",
                     "parent_sku",
                     "seo_path",
+                    "brand_name",
+                    "brand_external_id",
+                    "manufacturer_name",
+                    "manufacturer_email",
+                    "manufacturer_website",
+                    "manufacturer_external_id",
+                    "eu_responsible_name",
+                    "eu_responsible_email",
+                    "eu_responsible_website",
+                    "eu_responsible_external_id",
                     "taric_code",
                     "short_description",
                     "description",
+                    "website_description",
                     "purchase_price",
                     "category_path",
                     "gross_sales_price",
@@ -233,23 +386,44 @@ class JtlImportProcessor(models.AbstractModel):
         product_model = self.env["product.product"].with_company(run.company_id)
         template_model = self.env["product.template"].with_company(run.company_id)
         existing_variant = product_model.search([("default_code", "=", sku)], limit=1)
-        template = existing_variant.product_tmpl_id if existing_variant else template_model.search([("jtl_parent_sku", "=", sku)], limit=1)
-        vals = self._prepare_template_vals(run, product_payload, caches, logs)
+        template = existing_variant.product_tmpl_id if existing_variant else template_model.search([("parent_sku", "=", sku)], limit=1)
+        if not template and run.barcode_match_update:
+            barcode_variant = self._find_product_by_barcode(run, product_payload.get("product", {}).get("barcode"))
+            if barcode_variant:
+                existing_variant = barcode_variant
+                template = barcode_variant.product_tmpl_id
+        current_products = template.product_variant_ids if template else False
+        vals = self._prepare_template_vals(run, product_payload, caches, logs, current_products=current_products)
         if is_parent:
-            vals["jtl_parent_sku"] = sku
+            vals["parent_sku"] = sku
         if template:
             template.write(vals)
             return template, False
+        if run.update_existing_only:
+            self._log_skip_create(
+                logs,
+                sku,
+                "product_create",
+                _("Product %s does not exist yet and was skipped because 'Update Existing Only' is enabled.") % sku,
+            )
+            return False, False
         template = template_model.create(vals)
         if template.product_variant_id and not template.product_variant_id.default_code:
-            template.product_variant_id.write({"default_code": sku, "jtl_parent_sku": vals.get("jtl_parent_sku")})
+            template.product_variant_id.write({"default_code": sku, "parent_sku": vals.get("parent_sku")})
         return template, True
 
     def _upsert_variant_product(self, run, payload, product_payload, caches, logs, batch_number):
         parent_sku = product_payload.get("product", {}).get("parent_sku")
         parent_payload = payload.get("products", {}).get(parent_sku, {"sku": parent_sku, "product": {"name": parent_sku}})
         template, created_template = self._upsert_template_product(run, parent_payload, caches, logs, batch_number, is_parent=True)
+        if not template:
+            return False, False, False
         existing_variant = self.env["product.product"].search([("default_code", "=", product_payload.get("sku"))], limit=1)
+        barcode_variant = False
+        if not existing_variant and run.barcode_match_update:
+            barcode_variant = self._find_product_by_barcode(run, product_payload.get("product", {}).get("barcode"))
+            if barcode_variant and barcode_variant.product_tmpl_id == template:
+                existing_variant = barcode_variant
         attribute_pairs = self._extract_variant_pairs(product_payload.get("attributes", []), product_payload.get("product", {}))
         if not attribute_pairs:
             logs.append(
@@ -263,7 +437,7 @@ class JtlImportProcessor(models.AbstractModel):
             )
             variant = self.env["product.product"].search([("default_code", "=", product_payload.get("sku"))], limit=1)
             if variant:
-                variant.write({"jtl_parent_sku": parent_sku})
+                variant.write({"parent_sku": parent_sku})
                 return template, created_template, False
             return template, created_template, False
 
@@ -277,14 +451,23 @@ class JtlImportProcessor(models.AbstractModel):
                 if candidate_value_ids == wanted_value_ids:
                     variant = candidate
                     break
+        if not variant and existing_variant and existing_variant.product_tmpl_id == template:
+            variant = existing_variant
         created_variant = False
         if variant:
             created_variant = not bool(existing_variant)
+            current_products = variant if variant else template.product_variant_ids
             variant_vals = {
                 "default_code": product_payload.get("sku"),
-                "barcode": product_payload.get("product", {}).get("barcode"),
+                "barcode": self._resolve_unique_barcode(
+                    run,
+                    product_payload.get("sku"),
+                    product_payload.get("product", {}).get("barcode"),
+                    logs,
+                    current_products=current_products,
+                ),
                 "weight": product_payload.get("product", {}).get("weight") or 0.0,
-                "jtl_parent_sku": parent_sku,
+                "parent_sku": parent_sku,
                 "active": product_payload.get("product", {}).get("active", True),
             }
             variant_vals.update(
@@ -307,7 +490,23 @@ class JtlImportProcessor(models.AbstractModel):
                 )
             )
             variant.write(variant_vals)
-        template.write(self._prepare_template_vals(run, product_payload, caches, logs))
+        elif run.update_existing_only:
+            self._log_skip_create(
+                logs,
+                product_payload.get("sku"),
+                "variant_create",
+                _("Variant %s does not exist yet and was skipped because 'Update Existing Only' is enabled.") % product_payload.get("sku"),
+            )
+            return template, created_template, False
+        template.write(
+            self._prepare_template_vals(
+                run,
+                product_payload,
+                caches,
+                logs,
+                current_products=template.product_variant_ids,
+            )
+        )
         return template, created_template, created_variant
 
     def _extract_variant_pairs(self, attribute_rows, product_values):
@@ -331,7 +530,11 @@ class JtlImportProcessor(models.AbstractModel):
         ptav_records = ptav_model.browse()
         for name, value, is_variant in attribute_pairs:
             attribute = self._find_or_create_attribute(name, caches, is_variant=is_variant)
+            if not attribute:
+                continue
             attr_value = self._find_or_create_attribute_value(attribute, value, caches)
+            if not attr_value:
+                continue
             line = template.attribute_line_ids.filtered(lambda l: l.attribute_id == attribute)[:1]
             if not line:
                 line = line_model.create(
@@ -352,26 +555,31 @@ class JtlImportProcessor(models.AbstractModel):
             ptav_records |= ptav
         return ptav_records
 
-    def _find_or_create_manufacturer(self, values, caches):
-        normalized = self.env["jtl.import.normalizer"].normalized_name(values.get("manufacturer_name"))
-        email = (values.get("manufacturer_email") or "").strip().lower()
-        website = (values.get("manufacturer_website") or "").strip().lower()
-        external_id = values.get("manufacturer_external_id")
+    def _find_or_create_partner_by_role(self, values, caches, role):
+        role_prefix = "manufacturer" if role == "manufacturer" else "eu_responsible"
+        normalized = self.env["jtl.import.normalizer"].normalized_name(values.get("%s_name" % role_prefix))
+        email = (values.get("%s_email" % role_prefix) or "").strip().lower()
+        website = (values.get("%s_website" % role_prefix) or "").strip().lower()
+        external_id = values.get("%s_external_id" % role_prefix)
+        cache_key = "manufacturer" if role == "manufacturer" else "eu_responsible"
+        external_field = "manufacturer_external_id" if role == "manufacturer" else "eu_responsible_external_id"
+        flag_field = "is_manufacturer" if role == "manufacturer" else "is_eu_responsible"
+        business_flag_field = "is_manufacturer" if role == "manufacturer" else "is_eu_responsible"
         for key in (
             ("external_id", external_id),
             ("email", email),
             ("website", website),
             ("name", normalized),
         ):
-            if key[1] and caches["manufacturer"].get(key):
-                return caches["manufacturer"][key]
+            if key[1] and caches[cache_key].get(key):
+                return caches[cache_key][key]
         if not normalized:
             return False
-        domain = [("is_company", "=", True), ("jtl_normalized_name", "=", normalized)]
+        domain = [("is_company", "=", True), ("normalized_name", "=", normalized)]
         if external_id:
-            partner = self.env["res.partner"].search([("jtl_manufacturer_external_id", "=", external_id)], limit=1)
+            partner = self.env["res.partner"].search([(external_field, "=", external_id)], limit=1)
             if partner:
-                caches["manufacturer"][("external_id", external_id)] = partner
+                caches[cache_key][("external_id", external_id)] = partner
                 return partner
         partner = self.env["res.partner"].search(domain, limit=1)
         if not partner and email:
@@ -379,40 +587,199 @@ class JtlImportProcessor(models.AbstractModel):
         if not partner and website:
             partner = self.env["res.partner"].search([("website", "=ilike", website), ("is_company", "=", True)], limit=1)
         if not partner:
-            tag = self.env["res.partner.category"].search([("is_jtl_manufacturer_tag", "=", True)], limit=1)
-            if not tag:
-                tag = self.env["res.partner.category"].create({"name": "Manufacturer", "is_jtl_manufacturer_tag": True})
+            if self.env.context.get("update_existing_only"):
+                return False
             partner_vals = {
-                "name": values.get("manufacturer_name"),
+                "name": values.get("%s_name" % role_prefix),
                 "is_company": True,
-                "email": values.get("manufacturer_email"),
-                "website": values.get("manufacturer_website"),
-                "is_jtl_manufacturer": True,
-                "jtl_manufacturer_external_id": external_id,
-                "category_id": [(4, tag.id)],
+                "email": values.get("%s_email" % role_prefix),
+                "website": values.get("%s_website" % role_prefix),
+                flag_field: True,
+                external_field: external_id,
             }
+            if business_flag_field in self.env["res.partner"]._fields:
+                partner_vals[business_flag_field] = True
+            if role == "manufacturer":
+                tag = self.env["res.partner.category"].search([("is_manufacturer_tag", "=", True)], limit=1)
+                if not tag:
+                    tag = self.env["res.partner.category"].create({"name": "Manufacturer", "is_manufacturer_tag": True})
+                partner_vals["category_id"] = [(4, tag.id)]
             partner_vals.update(
                 self._extract_dynamic_fields(
                     "res.partner",
                     values,
-                    excluded_fields={"manufacturer_name", "manufacturer_email", "manufacturer_website", "manufacturer_external_id"},
+                    excluded_fields={
+                        "%s_name" % role_prefix,
+                        "%s_email" % role_prefix,
+                        "%s_website" % role_prefix,
+                        "%s_external_id" % role_prefix,
+                    },
                 )
             )
             partner = self.env["res.partner"].create(partner_vals)
         else:
-            write_vals = {"is_jtl_manufacturer": True}
-            if external_id and not partner.jtl_manufacturer_external_id:
-                write_vals["jtl_manufacturer_external_id"] = external_id
+            write_vals = {flag_field: True}
+            if business_flag_field in self.env["res.partner"]._fields:
+                write_vals[business_flag_field] = True
+            if external_id and not getattr(partner, external_field, False):
+                write_vals[external_field] = external_id
             if write_vals:
                 partner.write(write_vals)
-        caches["manufacturer"][("name", normalized)] = partner
+        caches[cache_key][("name", normalized)] = partner
         if email:
-            caches["manufacturer"][("email", email)] = partner
+            caches[cache_key][("email", email)] = partner
         if website:
-            caches["manufacturer"][("website", website)] = partner
+            caches[cache_key][("website", website)] = partner
         if external_id:
-            caches["manufacturer"][("external_id", external_id)] = partner
+            caches[cache_key][("external_id", external_id)] = partner
         return partner
+
+    def _find_or_create_manufacturer(self, values, caches):
+        return self._find_or_create_partner_by_role(values, caches, "manufacturer")
+
+    def _find_or_create_eu_responsible(self, values, caches):
+        return self._find_or_create_partner_by_role(values, caches, "eu_responsible")
+
+    def _find_or_create_brand(self, values, manufacturer, eu_responsible, caches):
+        if "product.brand" not in self.env:
+            return False
+        brand_name = (values.get("brand_name") or "").strip()
+        external_id = values.get("brand_external_id")
+        if external_id and caches["brand"].get(("external_id", external_id)):
+            brand = caches["brand"][("external_id", external_id)]
+        elif brand_name and caches["brand"].get(("name", brand_name.lower())):
+            brand = caches["brand"][("name", brand_name.lower())]
+        elif not brand_name and not external_id:
+            return False
+        else:
+            domain = []
+            if external_id and "brand_external_id" in self.env["product.brand"]._fields:
+                domain = [("brand_external_id", "=", external_id)]
+            if not domain and brand_name:
+                domain = [("name", "=ilike", brand_name)]
+            brand = self.env["product.brand"].search(domain, limit=1) if domain else self.env["product.brand"]
+            if not brand:
+                if self.env.context.get("update_existing_only") or not brand_name:
+                    return False
+                create_vals = {"name": brand_name}
+                if manufacturer:
+                    create_vals["manufacturer_id"] = manufacturer.id
+                if eu_responsible and "gdpr_responsible_id" in self.env["product.brand"]._fields:
+                    create_vals["gdpr_responsible_id"] = eu_responsible.id
+                if external_id and "brand_external_id" in self.env["product.brand"]._fields:
+                    create_vals["brand_external_id"] = external_id
+                brand = self.env["product.brand"].create(create_vals)
+            else:
+                write_vals = {}
+                if manufacturer and "manufacturer_id" in brand._fields and brand.manufacturer_id != manufacturer:
+                    write_vals["manufacturer_id"] = manufacturer.id
+                if eu_responsible and "gdpr_responsible_id" in brand._fields and brand.gdpr_responsible_id != eu_responsible:
+                    write_vals["gdpr_responsible_id"] = eu_responsible.id
+                if external_id and "brand_external_id" in brand._fields and not brand.brand_external_id:
+                    write_vals["brand_external_id"] = external_id
+                if write_vals:
+                    brand.write(write_vals)
+        if brand_name:
+            caches["brand"][("name", brand_name.lower())] = brand
+        if external_id:
+            caches["brand"][("external_id", external_id)] = brand
+        return brand
+
+    def _process_manufacturer_master_data(self, run, manufacturer_rows, caches):
+        logs = []
+        for row in manufacturer_rows or []:
+            partner_data = dict((row.get("model_data") or {}).get("res.partner") or {})
+            manufacturer_name = partner_data.get("name") or row.get("name")
+            if not manufacturer_name:
+                continue
+            values = {
+                "manufacturer_name": manufacturer_name,
+                "manufacturer_email": partner_data.get("email"),
+                "manufacturer_website": partner_data.get("website"),
+                "manufacturer_external_id": partner_data.get("manufacturer_external_id"),
+                **partner_data,
+            }
+            partner = self._find_or_create_manufacturer(values, caches)
+            if not partner:
+                if run.update_existing_only:
+                    self._log_skip_create(
+                        logs,
+                        False,
+                        "manufacturer_create",
+                        _("Manufacturer %s was skipped because 'Update Existing Only' is enabled.") % manufacturer_name,
+                    )
+                continue
+            write_vals = self._extract_dynamic_fields(
+                "res.partner",
+                partner_data,
+                excluded_fields={"name", "email", "website", "manufacturer_external_id", "is_manufacturer"},
+            )
+            if partner_data.get("email") and partner.email != partner_data.get("email"):
+                write_vals["email"] = partner_data.get("email")
+            if partner_data.get("website") and partner.website != partner_data.get("website"):
+                write_vals["website"] = partner_data.get("website")
+            if partner_data.get("name") and partner.name != partner_data.get("name"):
+                write_vals["name"] = partner_data.get("name")
+            if write_vals:
+                partner.write(write_vals)
+            logs.append(
+                {
+                    "article_number": False,
+                    "field_name": "manufacturer_master",
+                    "level": "info",
+                    "message": _("Manufacturer prepared: %s") % partner.display_name,
+                }
+            )
+        return logs
+
+    def _process_eu_responsible_master_data(self, run, eu_rows, caches):
+        logs = []
+        for row in eu_rows or []:
+            partner_data = dict((row.get("model_data") or {}).get("res.partner") or {})
+            partner_name = partner_data.get("name") or row.get("name")
+            if not partner_name:
+                continue
+            values = {
+                "eu_responsible_name": partner_name,
+                "eu_responsible_email": partner_data.get("email"),
+                "eu_responsible_website": partner_data.get("website"),
+                "eu_responsible_external_id": partner_data.get("eu_responsible_external_id"),
+                **partner_data,
+            }
+            partner = self._find_or_create_eu_responsible(values, caches)
+            if not partner:
+                if run.update_existing_only:
+                    self._log_skip_create(
+                        logs,
+                        False,
+                        "eu_responsible_create",
+                        _("EU representative %s was skipped because 'Update Existing Only' is enabled.") % partner_name,
+                    )
+                continue
+            write_vals = self._extract_dynamic_fields(
+                "res.partner",
+                partner_data,
+                excluded_fields={"name", "email", "website", "eu_responsible_external_id", "is_eu_responsible"},
+            )
+            if "is_eu_responsible" in self.env["res.partner"]._fields:
+                write_vals["is_eu_responsible"] = True
+            if partner_data.get("email") and partner.email != partner_data.get("email"):
+                write_vals["email"] = partner_data.get("email")
+            if partner_data.get("website") and partner.website != partner_data.get("website"):
+                write_vals["website"] = partner_data.get("website")
+            if partner_data.get("name") and partner.name != partner_data.get("name"):
+                write_vals["name"] = partner_data.get("name")
+            if write_vals:
+                partner.write(write_vals)
+            logs.append(
+                {
+                    "article_number": False,
+                    "field_name": "eu_responsible_master",
+                    "level": "info",
+                    "message": _("EU representative prepared: %s") % partner.display_name,
+                }
+            )
+        return logs
 
     def _find_or_create_category(self, category_path, caches):
         if not category_path:
@@ -431,9 +798,70 @@ class JtlImportProcessor(models.AbstractModel):
                 domain = [("name", "=", part), ("parent_id", "=", parent.id if parent else False)]
                 category = self.env["product.category"].search(domain, limit=1)
                 if not category:
+                    if self.env.context.get("update_existing_only"):
+                        return parent
                     category = self.env["product.category"].create({"name": part, "parent_id": parent.id if parent else False})
                 caches["category"][part_key] = category
             parent = category
+        return parent
+
+    def _build_public_category_path(self, category):
+        names = []
+        current = category
+        while current:
+            names.append(current.name)
+            current = current.parent_id
+        return " / ".join(reversed(names))
+
+    def _find_or_create_public_category(self, product_payload, caches):
+        if "product.public.category" not in self.env:
+            return False
+        values = product_payload.get("product", {})
+        category_path = values.get("category_path")
+        if not category_path:
+            return False
+        public_category_model = self.env["product.public.category"]
+        path = str(category_path).replace(">", "/")
+        path_parts = [item.strip() for item in path.split("/") if item.strip()]
+        if not path_parts:
+            return False
+        seo_data = product_payload.get("seo", {}) or {}
+        public_name = seo_data.get("public_category_name")
+        translated_names = seo_data.get("public_category_name_translations") or {}
+        cache_key = " / ".join(path_parts).lower()
+        if caches["public_category"].get(cache_key):
+            category = caches["public_category"][cache_key]
+            if public_name and category.name != public_name:
+                category.name = public_name
+            for lang_code, value in translated_names.items():
+                if value:
+                    category.with_context(lang=lang_code).name = value
+            return category
+        parent = False
+        full_path_parts = []
+        for index, part in enumerate(path_parts):
+            full_path_parts.append(part)
+            part_key = " / ".join(full_path_parts).lower()
+            category = caches["public_category"].get(part_key)
+            desired_name = public_name if index == len(path_parts) - 1 and public_name else part
+            if not category:
+                domain = [("name", "=", desired_name), ("parent_id", "=", parent.id if parent else False)]
+                category = public_category_model.search(domain, limit=1)
+                if not category and desired_name != part:
+                    domain = [("name", "=", part), ("parent_id", "=", parent.id if parent else False)]
+                    category = public_category_model.search(domain, limit=1)
+                if not category:
+                    if self.env.context.get("update_existing_only"):
+                        return parent
+                    category = public_category_model.create({"name": desired_name, "parent_id": parent.id if parent else False})
+                elif category.name != desired_name:
+                    category.name = desired_name
+                caches["public_category"][part_key] = category
+            parent = category
+        if parent and translated_names:
+            for lang_code, value in translated_names.items():
+                if value:
+                    parent.with_context(lang=lang_code).name = value
         return parent
 
     def _find_country(self, name, caches):
@@ -453,6 +881,8 @@ class JtlImportProcessor(models.AbstractModel):
             return caches["attribute"][key]
         attribute = self.env["product.attribute"].search([("name", "=ilike", name)], limit=1)
         if not attribute:
+            if self.env.context.get("update_existing_only"):
+                return False
             vals = {"name": name}
             if "create_variant" in self.env["product.attribute"]._fields:
                 vals["create_variant"] = "always" if is_variant else "no_variant"
@@ -469,6 +899,8 @@ class JtlImportProcessor(models.AbstractModel):
             limit=1,
         )
         if not attr_value:
+            if self.env.context.get("update_existing_only"):
+                return False
             attr_value = self.env["product.attribute.value"].create({"attribute_id": attribute.id, "name": value})
         caches["attribute_value"][key] = attr_value
         return attr_value
@@ -500,11 +932,17 @@ class JtlImportProcessor(models.AbstractModel):
         for field_name, lang_values in (translations or {}).items():
             odoo_field = {
                 "name": "name",
-                "description": "jtl_description_html",
-                "short_description": "jtl_short_description",
-                "meta_title": "jtl_meta_title",
-                "meta_description": "jtl_meta_description",
+                "short_description": "description_sale",
+                "meta_title": "meta_title",
+                "meta_description": "meta_description",
             }.get(field_name)
+            if field_name == "description":
+                if "website_description" in template._fields:
+                    odoo_field = "website_description"
+                elif "description" in template._fields:
+                    odoo_field = "description"
+                elif "description_sale" in template._fields:
+                    odoo_field = "description_sale"
             if not odoo_field or odoo_field not in template._fields:
                 continue
             for lang_code, value in (lang_values or {}).items():
@@ -524,6 +962,14 @@ class JtlImportProcessor(models.AbstractModel):
                 continue
             vendor = self.env["res.partner"].search([("name", "=ilike", supplier_name), ("is_company", "=", True)], limit=1)
             if not vendor:
+                if run.update_existing_only:
+                    self._log_skip_create(
+                        logs,
+                        sku,
+                        "supplier_create",
+                        _("Supplier %s was skipped because 'Update Existing Only' is enabled.") % supplier_name,
+                    )
+                    continue
                 vendor = self.env["res.partner"].create({"name": supplier_name, "is_company": True, "supplier_rank": 1})
             domain = [(partner_field, "=", vendor.id)]
             if template_field:
@@ -539,7 +985,7 @@ class JtlImportProcessor(models.AbstractModel):
                 "price": supplier_data.get("purchase_price") or 0.0,
                 "delay": int(supplier_data.get("lead_time") or 0),
                 "min_qty": supplier_data.get("minimum_quantity") or 0.0,
-                "jtl_is_default_supplier": supplier_data.get("default_supplier"),
+                "is_default_supplier": supplier_data.get("default_supplier"),
             }
             if template_field:
                 vals[template_field] = template.id
@@ -551,6 +997,14 @@ class JtlImportProcessor(models.AbstractModel):
                 supplierinfo.write(vals)
                 logs.append({"article_number": sku, "field_name": "supplier_update", "level": "info", "message": _("Supplier updated: %s") % vendor.name})
             else:
+                if run.update_existing_only:
+                    self._log_skip_create(
+                        logs,
+                        sku,
+                        "supplierinfo_create",
+                        _("Supplierinfo for %s was skipped because 'Update Existing Only' is enabled.") % vendor.name,
+                    )
+                    continue
                 supplierinfo_model.create(vals)
                 logs.append({"article_number": sku, "field_name": "supplier_create", "level": "info", "message": _("Supplier created: %s") % vendor.name})
 
@@ -570,7 +1024,7 @@ class JtlImportProcessor(models.AbstractModel):
                 response = urlopen(source_url, timeout=10)
                 content = response.read()
             except (URLError, ValueError) as exc:
-                logs.append({"article_number": template.jtl_parent_sku, "field_name": "image_url", "level": "warning", "message": _("Image download failed for %s: %s") % (source_url, exc)})
+                logs.append({"article_number": template.parent_sku, "field_name": "image_url", "level": "warning", "message": _("Image download failed for %s: %s") % (source_url, exc)})
                 continue
             checksum = hashlib.sha1(content).hexdigest()
             if checksum in seen_checksums:
@@ -590,7 +1044,7 @@ class JtlImportProcessor(models.AbstractModel):
             elif run.import_gallery_images and not gallery_supported:
                 logs.append(
                     {
-                        "article_number": template.jtl_parent_sku,
+                        "article_number": template.parent_sku,
                         "field_name": "image_url",
                         "level": "warning",
                         "message": _("Gallery image import skipped because product.image is unavailable in this Odoo instance."),
@@ -617,6 +1071,14 @@ class JtlImportProcessor(models.AbstractModel):
                 quant.inventory_quantity = quantity
                 quant.action_apply_inventory()
             else:
+                if run.update_existing_only:
+                    self._log_skip_create(
+                        logs,
+                        sku,
+                        "stock_quant_create",
+                        _("Stock quant for %s at %s was skipped because 'Update Existing Only' is enabled.") % (sku, location.display_name),
+                    )
+                    continue
                 quant = quant_model.create({"product_id": template.product_variant_id.id, "location_id": location.id, "inventory_quantity": quantity})
                 quant.action_apply_inventory()
 
@@ -636,4 +1098,69 @@ class JtlImportProcessor(models.AbstractModel):
         if "website_description" in template._fields and seo_data.get("description"):
             template.website_description = seo_data.get("description")
         if "website_published" not in template._fields and seo_data:
-            logs.append({"article_number": template.jtl_parent_sku, "field_name": "website", "level": "warning", "message": _("Website fields are unavailable because website_sale is not installed.")})
+            logs.append({"article_number": template.parent_sku, "field_name": "website", "level": "warning", "message": _("Website fields are unavailable because website_sale is not installed.")})
+
+    def _process_bom(self, template, bom_rows, caches, logs, sku):
+        if not bom_rows:
+            return
+        if "mrp.bom" not in self.env:
+            logs.append(
+                {
+                    "article_number": sku,
+                    "field_name": "bom",
+                    "level": "warning",
+                    "message": _("BOM rows were staged but MRP is not installed, so no Stückliste was created."),
+                }
+            )
+            return
+        bom_model = self.env["mrp.bom"]
+        bom_line_model = self.env["mrp.bom.line"]
+        component_model = self.env["product.product"]
+        bom = bom_model.search([("product_tmpl_id", "=", template.id), ("type", "=", "normal")], limit=1)
+        if not bom:
+            if run.update_existing_only:
+                self._log_skip_create(
+                    logs,
+                    sku,
+                    "bom_create",
+                    _("BOM for %s was skipped because 'Update Existing Only' is enabled.") % sku,
+                )
+                return
+            bom = bom_model.create({"product_tmpl_id": template.id, "type": "normal"})
+        existing_by_product = {line.product_id.id: line for line in bom.bom_line_ids}
+        desired_product_ids = set()
+        for row in bom_rows:
+            component_sku = row.get("component_sku")
+            if not component_sku:
+                continue
+            component = caches["product"].get(component_sku) or component_model.search([("default_code", "=", component_sku)], limit=1)
+            if not component:
+                logs.append(
+                    {
+                        "article_number": sku,
+                        "field_name": "bom",
+                        "level": "warning",
+                        "message": _("BOM component %s was not found in Odoo.") % component_sku,
+                    }
+                )
+                continue
+            caches["product"][component_sku] = component
+            desired_product_ids.add(component.id)
+            quantity = row.get("quantity") or 1.0
+            line_vals = {"bom_id": bom.id, "product_id": component.id, "product_qty": quantity}
+            existing_line = existing_by_product.get(component.id)
+            if existing_line:
+                existing_line.write(line_vals)
+            else:
+                if run.update_existing_only:
+                    self._log_skip_create(
+                        logs,
+                        sku,
+                        "bom_line_create",
+                        _("BOM line %s -> %s was skipped because 'Update Existing Only' is enabled.") % (sku, component_sku),
+                    )
+                    continue
+                bom_line_model.create(line_vals)
+        stale_lines = bom.bom_line_ids.filtered(lambda line: line.product_id.id not in desired_product_ids)
+        if stale_lines:
+            stale_lines.unlink()

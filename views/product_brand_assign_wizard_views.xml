@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_brand_assign_wizard_form" model="ir.ui.view">
+        <field name="name">product.brand.assign.wizard.form</field>
+        <field name="model">product.brand.assign.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Marke zuweisen">
+                <group>
+                    <field name="brand_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                    <field name="product_count" readonly="1"/>
+                </group>
+                <footer>
+                    <button name="action_apply" type="object" string="Apply" class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

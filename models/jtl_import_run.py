@@ -1,5 +1,6 @@
 import base64
 import gzip
+import io
 import json
 import logging
 
@@ -42,7 +43,9 @@ class JtlImportRun(models.Model):
     import_images = fields.Boolean(default=True)
     import_gallery_images = fields.Boolean(default=False)
     import_seo = fields.Boolean(default=False)
+    barcode_match_update = fields.Boolean(default=False, string="Barcode Match Update")
     dry_run = fields.Boolean(default=False)
+    update_existing_only = fields.Boolean(default=False)
     active_test = fields.Boolean(default=True)
     last_error = fields.Text(readonly=True)
     created_products = fields.Integer(default=0, readonly=True)
@@ -86,6 +89,20 @@ class JtlImportRun(models.Model):
         self.source_attachment_id = self._store_binary_attachment(filename, base64.b64decode(datas), "text/csv")
         self.filename = filename
 
+    def set_source_bundle(self, file_specs):
+        self.ensure_one()
+        manifest = [
+            {
+                "file_key": spec.get("file_key"),
+                "file_name": spec.get("file_name"),
+            }
+            for spec in (file_specs or [])
+        ]
+        payload = json.dumps(manifest, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
+        if self.source_attachment_id:
+            self.source_attachment_id.unlink()
+        self.source_attachment_id = self._store_binary_attachment("%s.source_bundle.json" % self.name, payload, "application/json")
+
     def set_payload(self, payload):
         self.ensure_one()
         payload_json = json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
@@ -100,7 +117,9 @@ class JtlImportRun(models.Model):
         if not self.payload_attachment_id:
             return {}
         datas = base64.b64decode(self.payload_attachment_id.datas or b"")
-        return json.loads(gzip.decompress(datas).decode("utf-8"))
+        with gzip.GzipFile(fileobj=io.BytesIO(datas), mode="rb") as gzip_stream:
+            with io.TextIOWrapper(gzip_stream, encoding="utf-8") as payload_stream:
+                return json.load(payload_stream)
 
     def action_reset_to_draft(self):
         for run in self:

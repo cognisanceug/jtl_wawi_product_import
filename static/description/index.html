@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JTL Wawi Product Import</title>
+  <style>
+    :root {
+      --bg: #f4f7ff;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #4b5563;
+      --accent: #5b4aa8;
+      --accent2: #4568ff;
+      --border: #e5e7eb;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef2ff 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 28px;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 18px 40px rgba(27, 37, 80, 0.12);
+    }
+    .hero img {
+      width: 240px;
+      height: 240px;
+      object-fit: contain;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 42px;
+      line-height: 1.1;
+    }
+    p.lead {
+      margin: 0 0 18px;
+      font-size: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .pill {
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    .pill.primary {
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      color: white;
+      border: none;
+    }
+    .section {
+      margin-top: 28px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    ul {
+      margin: 12px 0 0 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .shots {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    .shots img {
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 28px rgba(27, 37, 80, 0.08);
+    }
+    @media (max-width: 860px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      h1 { font-size: 34px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <img src="icon.png" alt="JTL Wawi Product Import icon">
+      <div>
+        <h1>JTL Wawi Product Import</h1>
+        <p class="lead">
+          Import JTL-Wawi product CSV bundles into Odoo with a multi-step wizard,
+          per-file mapping, barcode conflict handling, variant linking and staged background processing.
+        </p>
+        <div class="pills">
+          <span class="pill primary">Multi CSV Wizard</span>
+          <span class="pill">Auto Mapping</span>
+          <span class="pill">Barcode Match Update</span>
+          <span class="pill">EU Responsible</span>
+          <span class="pill">Background Queue</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Features</h2>
+      <div class="grid">
+        <div>
+          <ul>
+            <li>Separate CSV tabs for article master data, manufacturers, EU Responsible, categories, supplier info and variants.</li>
+            <li>Automatic header detection and per-file field mapping.</li>
+            <li>Option to create new custom Odoo fields directly from the wizard.</li>
+            <li>Barcode conflict handling with skip or match-update mode.</li>
+          </ul>
+        </div>
+        <div>
+          <ul>
+            <li>Parent/child product linking for variant structures.</li>
+            <li>Manufacturer, EU Responsible and brand resolution.</li>
+            <li>Supplierinfo, stock, images, SEO and BOM import support.</li>
+            <li>Length, width and height are synced to volume automatically.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Screenshots</h2>
+      <div class="shots">
+        <img src="main_1.png" alt="JTL Wawi Product Import overview">
+        <img src="main_screenshot.png" alt="JTL Wawi Product Import wizard screenshot">
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+.o_jtl_import_wizard {
+    .o_form_sheet_bg {
+        max-width: 100%;
+    }
+
+    .o_form_sheet {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        background: white;
+        padding-top: 0.75rem;
+        box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.08);
+    }
+}

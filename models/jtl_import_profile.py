@@ -1,4 +1,17 @@
-from odoo import fields, models
+from odoo import api, fields, models
+
+SOURCE_FILE_SELECTION = [
+    ("article_master", "Artikelstammdaten"),
+    ("manufacturer", "Hersteller"),
+    ("eu_representative", "EU RP"),
+    ("category", "Kategorien"),
+    ("supplierinfo", "Lieferantenartikel"),
+    ("variation_combination", "Variationskombinationen"),
+    ("variation_definition", "Variationen"),
+    ("attribute", "Attribute"),
+    ("feature", "Eigene Merkmale"),
+    ("bom", "Stueckliste"),
+]
 
 
 class JtlImportProfile(models.Model):
@@ -19,10 +32,19 @@ class JtlImportProfileLine(models.Model):
 
     profile_id = fields.Many2one("jtl.import.profile", required=True, ondelete="cascade")
     sequence = fields.Integer(default=10)
+    source_file_key = fields.Selection(SOURCE_FILE_SELECTION, required=True, default="article_master")
     source_column = fields.Char(required=True)
     target_model = fields.Char(required=True)
     target_field = fields.Char(required=True)
     language_code = fields.Char()
+    language_id = fields.Many2one(
+        "res.lang",
+        string="Sprache",
+        compute="_compute_language_id",
+        inverse="_inverse_language_id",
+        readonly=False,
+        domain=[("active", "=", True)],
+    )
     transform_logic = fields.Selection(
         [
             ("text", "Text"),
@@ -39,3 +61,13 @@ class JtlImportProfileLine(models.Model):
     required = fields.Boolean(default=False)
     active = fields.Boolean(default=True)
     default_value = fields.Char()
+
+    @api.depends("language_code")
+    def _compute_language_id(self):
+        Lang = self.env["res.lang"]
+        for record in self:
+            record.language_id = Lang.search([("code", "=", record.language_code), ("active", "=", True)], limit=1)
+
+    def _inverse_language_id(self):
+        for record in self:
+            record.language_code = record.language_id.code if record.language_id else False

@@ -7,10 +7,11 @@
             <list>
                 <field name="sequence"/>
                 <field name="name"/>
+                <field name="source_file_key"/>
                 <field name="source_column"/>
                 <field name="target_model"/>
                 <field name="target_field"/>
-                <field name="language_code"/>
+                <field name="language_id" options="{'no_create': True}"/>
                 <field name="transform_logic"/>
                 <field name="required"/>
                 <field name="active"/>
@@ -28,12 +29,13 @@
                         <group>
                             <field name="name"/>
                             <field name="sequence"/>
+                            <field name="source_file_key"/>
                             <field name="source_column"/>
                             <field name="target_model"/>
                             <field name="target_field"/>
                         </group>
                         <group>
-                            <field name="language_code"/>
+                            <field name="language_id" options="{'no_create': True}"/>
                             <field name="transform_logic"/>
                             <field name="default_value"/>
                             <field name="required"/>
@@ -51,4 +53,3 @@
         <field name="view_mode">list,form</field>
     </record>
 </odoo>
-

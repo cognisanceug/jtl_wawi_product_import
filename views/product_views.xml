@@ -9,22 +9,23 @@
                 <group string="JTL">
                     <group>
                         <field name="manufacturer_partner_id"/>
+                        <field name="manufacturer_id"/>
+                        <field name="eu_responsible_partner_id"/>
+                        <field name="brand_id"/>
                         <field name="manufacturer_sku"/>
-                        <field name="jtl_parent_sku"/>
-                        <field name="jtl_taric_code"/>
+                        <field name="parent_sku"/>
                     </group>
                     <group>
-                        <field name="jtl_seo_path"/>
-                        <field name="jtl_meta_title"/>
-                        <field name="jtl_meta_description"/>
+                        <field name="length"/>
+                        <field name="width"/>
+                        <field name="height"/>
+                        <field name="volume"/>
+                        <field name="seo_path"/>
+                        <field name="meta_title"/>
+                        <field name="meta_description"/>
                     </group>
-                </group>
-                <group string="JTL Descriptions">
-                    <field name="jtl_short_description"/>
-                    <field name="jtl_description_html"/>
                 </group>
             </xpath>
         </field>
     </record>
 </odoo>
-

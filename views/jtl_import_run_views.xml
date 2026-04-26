@@ -19,7 +19,7 @@
         <field name="name">jtl.import.run.tree</field>
         <field name="model">jtl.import.run</field>
         <field name="arch" type="xml">
-            <list>
+            <list create="0">
                 <field name="name"/>
                 <field name="filename"/>
                 <field name="state"/>
@@ -55,6 +55,7 @@
                             <field name="company_id"/>
                             <field name="batch_size"/>
                             <field name="dry_run" readonly="1"/>
+                            <field name="barcode_match_update" readonly="1"/>
                         </group>
                         <group>
                             <field name="import_stock" readonly="1"/>
@@ -111,6 +112,7 @@
         <field name="name">Import Runs</field>
         <field name="res_model">jtl.import.run</field>
         <field name="view_mode">list,form</field>
+        <field name="context">{'create': False}</field>
     </record>
 
     <record id="action_jtl_import_log" model="ir.actions.act_window">

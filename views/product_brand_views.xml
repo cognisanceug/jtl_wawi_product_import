@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_brand_tree" model="ir.ui.view">
+        <field name="name">product.brand.tree</field>
+        <field name="model">product.brand</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="manufacturer_id"/>
+                <field name="gdpr_responsible_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_product_brand_form" model="ir.ui.view">
+        <field name="name">product.brand.form</field>
+        <field name="model">product.brand</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="manufacturer_id"/>
+                        <field name="gdpr_responsible_id" string="EU Responsible"/>
+                        <field name="brand_external_id"/>
+                        <field name="active"/>
+                    </group>
+                    <notebook>
+                        <page name="mappings" string="Mappings">
+                            <field name="map_ids">
+                                <list editable="bottom">
+                                    <field name="channel"/>
+                                    <field name="external_name"/>
+                                    <field name="external_id"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_brand" model="ir.actions.act_window">
+        <field name="name">Brands</field>
+        <field name="res_model">product.brand</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_brand_channel_map_tree" model="ir.ui.view">
+        <field name="name">brand.channel.map.tree</field>
+        <field name="model">brand.channel.map</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="brand_id"/>
+                <field name="channel"/>
+                <field name="external_name"/>
+                <field name="external_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_brand_channel_map_form" model="ir.ui.view">
+        <field name="name">brand.channel.map.form</field>
+        <field name="model">brand.channel.map</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="brand_id"/>
+                        <field name="channel"/>
+                        <field name="external_name"/>
+                        <field name="external_id"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_brand_channel_map" model="ir.actions.act_window">
+        <field name="name">Brand Mappings</field>
+        <field name="res_model">brand.channel.map</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_product_brand_root" name="Brands" sequence="35" action="action_product_brand"/>
+    <menuitem id="menu_brand_channel_map" name="Brand Mappings" parent="menu_product_brand_root" action="action_brand_channel_map" sequence="50"/>
+</odoo>

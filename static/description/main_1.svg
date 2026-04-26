@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#eef2ff"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4568ff"/>
+      <stop offset="100%" stop-color="#8a4dff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#1b2550" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <circle cx="1110" cy="110" r="160" fill="#7d5cff" opacity="0.08"/>
+  <circle cx="170" cy="610" r="210" fill="#2563eb" opacity="0.06"/>
+
+  <rect x="70" y="70" rx="36" ry="36" width="1140" height="580" fill="#ffffff" filter="url(#shadow)"/>
+  <rect x="70" y="70" rx="36" ry="36" width="1140" height="86" fill="#f7f8fb"/>
+  <rect x="70" y="70" rx="36" ry="36" width="1140" height="86" fill="none" stroke="#e3e7f0"/>
+
+  <image href="icon.png" x="120" y="190" width="240" height="240" preserveAspectRatio="xMidYMid meet"/>
+
+  <text x="420" y="235" font-family="DejaVu Sans, Arial, sans-serif" font-size="54" font-weight="700" fill="#111827">
+    JTL Wawi Product Import
+  </text>
+  <text x="420" y="290" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#4b5563">
+    CSV Wizard for JTL Wawi to Odoo with staged processing, smart mapping and stock sync.
+  </text>
+
+  <rect x="420" y="340" rx="18" ry="18" width="220" height="54" fill="url(#accent)"/>
+  <text x="530" y="375" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff">
+    Multi-CSV Wizard
+  </text>
+
+  <rect x="660" y="340" rx="18" ry="18" width="178" height="54" fill="#eef2ff"/>
+  <text x="749" y="375" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="700" fill="#3f4fa8">
+    Auto Matching
+  </text>
+
+  <rect x="850" y="340" rx="18" ry="18" width="172" height="54" fill="#eefaf3"/>
+  <text x="936" y="375" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="700" fill="#1f7a4d">
+    EU Responsible
+  </text>
+
+  <rect x="420" y="430" rx="18" ry="18" width="630" height="120" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="450" y="468" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">Included features</text>
+  <text x="450" y="505" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" fill="#374151">- File grouped mapping tabs with dynamic headers</text>
+  <text x="450" y="535" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" fill="#374151">- Barcode conflict handling with update or skip mode</text>
+  <text x="450" y="565" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" fill="#374151">- Parent/child variant linking, supplierinfo, BOM, SEO and images</text>
+
+  <text x="120" y="500" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2937">Odoo native app icon and store-ready assets</text>
+  <text x="120" y="535" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" fill="#6b7280">Designed to match standard Odoo app presentation.</text>
+</svg>
