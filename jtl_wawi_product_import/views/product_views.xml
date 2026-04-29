@@ -8,7 +8,6 @@
             <xpath expr="//page[@name='general_information']/group" position="after">
                 <group string="JTL">
                     <group>
-                        <field name="manufacturer_partner_id"/>
                         <field name="manufacturer_id"/>
                         <field name="eu_responsible_partner_id"/>
                         <field name="brand_id"/>
