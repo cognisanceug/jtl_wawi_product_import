@@ -6,6 +6,7 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
+                <field name="is_default"/>
                 <field name="company_id"/>
                 <field name="active"/>
             </list>
@@ -17,9 +18,14 @@
         <field name="model">jtl.import.profile</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="action_duplicate_profile" type="object" string="Duplizieren" class="btn-secondary"/>
+                </header>
                 <sheet>
                     <group>
                         <field name="name"/>
+                        <field name="description"/>
+                        <field name="is_default"/>
                         <field name="company_id"/>
                         <field name="active"/>
                     </group>
@@ -29,11 +35,19 @@
                             <field name="active"/>
                             <field name="source_file_key"/>
                             <field name="source_column"/>
+                            <field name="source_column_label"/>
+                            <field name="sample_value"/>
                             <field name="target_model"/>
                             <field name="target_field"/>
+                            <field name="create_field"/>
+                            <field name="new_field_name"/>
+                            <field name="new_field_label"/>
+                            <field name="new_field_type"/>
+                            <field name="relation_model"/>
                             <field name="language_id" options="{'no_create': True}"/>
                             <field name="transform_logic"/>
                             <field name="required"/>
+                            <field name="import_enabled"/>
                             <field name="default_value"/>
                         </list>
                     </field>

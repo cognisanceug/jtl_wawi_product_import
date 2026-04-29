@@ -28,6 +28,9 @@ class JtlImportNormalizer(models.AbstractModel):
             return False
         return re.sub(r"\s+", "-", text.strip("/"))
 
+    def normalize_selection(self, value):
+        return self.normalize_text(value)
+
     def normalize_boolean(self, value):
         text = (self.normalize_text(value) or "").lower()
         if text in {"1", "true", "yes", "ja", "y", "x"}:
@@ -60,16 +63,34 @@ class JtlImportNormalizer(models.AbstractModel):
             return 0.0
 
     def apply_transform(self, value, transform_logic):
+        if transform_logic in ("text", "trim", "char", "selection", "many2one"):
+            return self.normalize_text(value)
         if transform_logic == "decimal":
+            return self.normalize_decimal(value)
+        if transform_logic == "decimal_comma":
             return self.normalize_decimal(value)
         if transform_logic == "boolean":
             return self.normalize_boolean(value)
+        if transform_logic == "boolean_normalize":
+            return self.normalize_boolean(value)
         if transform_logic == "html":
+            return self.normalize_html(value)
+        if transform_logic == "html_clean":
             return self.normalize_html(value)
         if transform_logic == "integer":
             return self.normalize_integer(value)
+        if transform_logic == "uppercase":
+            text = self.normalize_text(value)
+            return text.upper() if text else False
+        if transform_logic == "lowercase":
+            text = self.normalize_text(value)
+            return text.lower() if text else False
         if transform_logic == "path":
             return self.normalize_path(value)
+        if transform_logic == "slug":
+            return self.normalize_path(value)
+        if transform_logic == "ignore_empty":
+            return self.normalize_text(value)
         return self.normalize_text(value)
 
     def dumps_payload(self, payload):
@@ -77,4 +98,3 @@ class JtlImportNormalizer(models.AbstractModel):
 
     def normalized_name(self, value):
         return re.sub(r"\s+", " ", (value or "").strip().lower())
-

@@ -7,17 +7,23 @@
             <form string="Import JTL CSV Bundle" class="o_jtl_import_wizard">
                 <header>
                     <button name="action_previous_step" type="object" string="Back" class="btn-secondary" invisible="wizard_step == 'files'"/>
-                    <button name="action_apply_profile" type="object" string="Apply Profile" class="btn-secondary" invisible="wizard_step != 'files' or not profile_id"/>
+                    <button name="action_apply_profile" type="object" string="Load Mapping" class="btn-secondary" invisible="wizard_step != 'files' or not profile_id"/>
+                    <button name="action_use_default_profile" type="object" string="Standard-Mapping" class="btn-secondary" invisible="wizard_step != 'files'"/>
+                    <button name="action_reset_mapping" type="object" string="Reset Mapping" class="btn-secondary" invisible="wizard_step == 'files'"/>
                     <button name="action_next_step" type="object" string="Next" class="btn-secondary" invisible="wizard_step == 'review'"/>
-                    <button name="action_validate" type="object" string="Validate" class="btn-primary" invisible="wizard_step != 'review'"/>
-                    <button name="action_validate_and_queue" type="object" string="Validate and Queue" class="btn-primary" invisible="wizard_step != 'review'"/>
+                    <button name="action_check_mapping" type="object" string="Mapping pruefen" class="btn-primary" invisible="wizard_step != 'mapping'"/>
+                    <button name="action_validate" type="object" string="Dry-Run / Validate" class="btn-primary" invisible="wizard_step != 'review'"/>
+                    <button name="action_validate_and_queue" type="object" string="Import starten" class="btn-primary" invisible="wizard_step != 'review'"/>
                 </header>
-                <group invisible="wizard_step != 'files'">
+
+                <group>
                     <field name="wizard_step" widget="statusbar" statusbar_visible="files,mapping,review"/>
                 </group>
+
                 <group invisible="wizard_step != 'files'">
                     <field name="precheck_message" nolabel="1" readonly="1" widget="html"/>
                 </group>
+
                 <group invisible="wizard_step != 'files'">
                     <group>
                         <field name="profile_id"/>
@@ -26,6 +32,7 @@
                         <field name="update_existing_only"/>
                         <field name="barcode_match_update"/>
                         <field name="headers_loaded" readonly="1"/>
+                        <field name="mapping_validated" readonly="1"/>
                         <field name="contacts_installed" readonly="1" invisible="1"/>
                         <field name="website_sale_installed" readonly="1" invisible="1"/>
                         <field name="product_variants_enabled" readonly="1" invisible="1"/>
@@ -37,8 +44,10 @@
                         <field name="import_seo"/>
                         <field name="save_profile"/>
                         <field name="profile_name" invisible="not save_profile"/>
+                        <field name="profile_description" invisible="not save_profile"/>
                     </group>
                 </group>
+
                 <group string="CSV-Dateien" invisible="wizard_step != 'files'">
                     <group>
                         <field name="article_master_file_data" filename="article_master_file_name"/>
@@ -55,198 +64,188 @@
                         <field name="bom_file_data" filename="bom_file_name"/>
                     </group>
                 </group>
+
                 <notebook invisible="wizard_step == 'files'">
                     <page string="Artikelstammdaten">
-                        <field name="article_master_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'article_master'}">
+                        <field name="article_master_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
                                 <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled" string="Importieren"/>
+                                <field name="source_column_label" string="CSV-Spalte"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype" string="Erkannt"/>
                                 <field name="target_model"/>
                                 <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
+                                <field name="target_field_ttype" string="Feldtyp" readonly="1"/>
+                                <field name="field_required" string="Pflichtfeld" readonly="1"/>
                                 <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="new_field_name"/>
+                                <field name="new_field_label"/>
+                                <field name="custom_field_ttype" string="Neuer Feldtyp"/>
+                                <field name="relation_model" invisible="custom_field_ttype != 'many2one'"/>
+                                <field name="transform_logic"/>
+                                <field name="relation_hint" string="Hinweis" readonly="1"/>
+                                <field name="status" readonly="1"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
-                    <page string="Herstellerdaten">
-                        <field name="manufacturer_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'manufacturer'}">
+                    <page string="Hersteller">
+                        <field name="manufacturer_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label" string="CSV-Spalte"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="create_field_if_missing"/>
+                                <field name="new_field_name"/>
+                                <field name="custom_field_ttype"/>
+                                <field name="transform_logic"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
-                    <page string="EU-RP-Daten">
-                        <field name="eu_representative_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'eu_representative'}">
+                    <page string="EU-RP">
+                        <field name="eu_representative_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label" string="CSV-Spalte"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="transform_logic"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
-                    <page string="Kategoriedaten">
-                        <field name="category_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'category'}">
+                    <page string="Kategorien">
+                        <field name="category_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="create_field_if_missing"/>
+                                <field name="new_field_name"/>
+                                <field name="custom_field_ttype"/>
+                                <field name="transform_logic"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
                     <page string="Lieferantenartikel">
-                        <field name="supplierinfo_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'supplierinfo'}">
+                        <field name="supplierinfo_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="create_field_if_missing"/>
+                                <field name="new_field_name"/>
+                                <field name="custom_field_ttype"/>
+                                <field name="relation_hint" readonly="1"/>
+                                <field name="transform_logic"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
                     <page string="Variationskombinationen">
-                        <field name="variation_combination_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'variation_combination'}">
+                        <field name="variation_combination_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="transform_logic"/>
+                                <field name="relation_hint" readonly="1"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
                     <page string="Variationen">
-                        <field name="variation_definition_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'variation_definition'}">
+                        <field name="variation_definition_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="transform_logic"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
                     <page string="Attribute">
-                        <field name="attribute_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'attribute'}">
+                        <field name="attribute_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="create_field_if_missing"/>
+                                <field name="new_field_name"/>
+                                <field name="custom_field_ttype"/>
+                                <field name="transform_logic"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
-                    <page string="Merkmalsdaten">
-                        <field name="feature_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'feature'}">
+                    <page string="Eigene Merkmale">
+                        <field name="feature_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="create_field_if_missing"/>
+                                <field name="new_field_name"/>
+                                <field name="custom_field_ttype"/>
+                                <field name="transform_logic"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
                     <page string="Stueckliste">
-                        <field name="bom_mapping_line_ids" nolabel="1" class="o_jtl_mapping_lines" context="{'default_source_file_key': 'bom'}">
+                        <field name="bom_mapping_line_ids" nolabel="1">
                             <list editable="bottom" limit="1000">
-                                <field name="sequence" optional="hide"/>
                                 <field name="active"/>
-                                <field name="source_column"/>
-                                <field name="relation_hint" string="Erkannt als" readonly="1"/>
+                                <field name="import_enabled"/>
+                                <field name="source_column_label"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype"/>
                                 <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="target_field_name" string="Feldname"/>
-                                <field name="custom_field_ttype" string="Feldtyp"/>
-                                <field name="language_id" string="Sprache" options="{'no_create': True}"/>
-                                <field name="transform_logic" string="Umwandlung"/>
-                                <field name="required"/>
-                                <field name="default_value"/>
+                                <field name="target_field_id" options="{'no_create': True}"/>
+                                <field name="transform_logic"/>
+                                <field name="relation_hint" readonly="1"/>
+                                <field name="note" readonly="1"/>
                             </list>
                         </field>
                     </page>
                 </notebook>
+
                 <footer>
                     <button string="Cancel" special="cancel"/>
                 </footer>

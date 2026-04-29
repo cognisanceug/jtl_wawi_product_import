@@ -12,6 +12,36 @@ class JtlImportParser(models.AbstractModel):
     _name = "jtl.import.parser"
     _description = "JTL CSV Parser"
 
+    def _make_unique_header_keys(self, headers):
+        counters = defaultdict(int)
+        result = []
+        for header in headers:
+            cleaned = (header or "").strip()
+            if not cleaned:
+                result.append(False)
+                continue
+            counters[cleaned] += 1
+            key = cleaned if counters[cleaned] == 1 else "%s__%s" % (cleaned, counters[cleaned])
+            result.append(key)
+        return result
+
+    def _sniff_csv(self, datas):
+        raw = self._get_raw_file_bytes(datas)
+        last_error = False
+        for encoding in ("utf-8-sig", "cp1252", "latin1"):
+            try:
+                decoded = raw.decode(encoding)
+                sample = decoded[:8192]
+                try:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=";,\t|")
+                    delimiter = dialect.delimiter
+                except csv.Error:
+                    delimiter = ";"
+                return decoded, delimiter
+            except UnicodeDecodeError as exc:
+                last_error = exc
+        raise ValueError(_("Unable to decode CSV file: %s") % last_error)
+
     def _html_to_text_lines(self, value):
         text = html.unescape(value or "")
         text = re.sub(r"(?i)<br\s*/?>", "\n", text)
@@ -91,24 +121,26 @@ class JtlImportParser(models.AbstractModel):
         return base64.b64decode(datas or b"")
 
     def _open_csv_reader(self, datas):
-        raw = self._get_raw_file_bytes(datas)
-        last_error = False
-        for encoding in ("utf-8-sig", "cp1252", "latin1"):
-            try:
-                decoded = raw.decode(encoding)
-                text_stream = io.StringIO(decoded, newline=None)
-                sample = decoded[:8192]
-                try:
-                    dialect = csv.Sniffer().sniff(sample, delimiters=";,\t|")
-                    delimiter = dialect.delimiter
-                except csv.Error:
-                    delimiter = ";"
-                reader = csv.DictReader(text_stream, delimiter=delimiter)
-                _ = reader.fieldnames
-                return text_stream, reader
-            except UnicodeDecodeError as exc:
-                last_error = exc
-        raise ValueError(_("Unable to decode CSV file: %s") % last_error)
+        decoded, delimiter = self._sniff_csv(datas)
+        text_stream = io.StringIO(decoded, newline=None)
+        base_reader = csv.reader(text_stream, delimiter=delimiter)
+        try:
+            raw_headers = next(base_reader)
+        except StopIteration:
+            raw_headers = []
+        cleaned_headers = []
+        for header in raw_headers:
+            cleaned = (header or "").strip()
+            cleaned_headers.append(cleaned or False)
+        unique_headers = self._make_unique_header_keys(cleaned_headers)
+        if not any(unique_headers):
+            reader = csv.DictReader(io.StringIO("", newline=None), fieldnames=[])
+            reader.fieldnames = []
+            return text_stream, reader
+        reader = csv.DictReader(text_stream, fieldnames=unique_headers, delimiter=delimiter)
+        reader.fieldnames = unique_headers
+        reader.original_fieldnames = cleaned_headers
+        return text_stream, reader
 
     def _get_mapping_value(self, mapping, key, default=False):
         if isinstance(mapping, dict):
@@ -130,6 +162,58 @@ class JtlImportParser(models.AbstractModel):
             return headers
         finally:
             stream.close()
+
+    def analyze_file(self, datas):
+        stream, reader = self._open_csv_reader(datas)
+        try:
+            if not reader.fieldnames:
+                raise ValueError(_("The CSV file does not contain a header row."))
+            columns = [
+                {
+                    "source_column": key,
+                    "source_column_label": label or key,
+                    "sample_value": False,
+                    "values": [],
+                }
+                for key, label in zip(reader.fieldnames, getattr(reader, "original_fieldnames", reader.fieldnames))
+                if key
+            ]
+            by_key = {column["source_column"]: column for column in columns}
+            for row in reader:
+                if not row:
+                    continue
+                for key, value in row.items():
+                    column = by_key.get(key)
+                    if not column:
+                        continue
+                    text = (value or "").strip()
+                    if not text:
+                        continue
+                    if not column["sample_value"]:
+                        column["sample_value"] = text[:255]
+                    if len(column["values"]) < 25:
+                        column["values"].append(text)
+            result = []
+            for column in columns:
+                if not column["sample_value"]:
+                    continue
+                result.append(
+                    {
+                        "source_column": column["source_column"],
+                        "source_column_label": column["source_column_label"],
+                        "sample_value": column["sample_value"],
+                        "values": column["values"],
+                    }
+                )
+            return result
+        finally:
+            stream.close()
+
+    def analyze_bundle(self, file_specs):
+        analysis_by_file = {}
+        for spec in file_specs or []:
+            analysis_by_file[spec.get("file_key")] = self.analyze_file(spec.get("file_data"))
+        return analysis_by_file
 
     def extract_headers_bundle(self, file_specs):
         headers_by_file = {}

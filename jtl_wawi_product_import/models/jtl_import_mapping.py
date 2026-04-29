@@ -51,15 +51,18 @@ class JtlImportMapping(models.Model):
     )
     transform_logic = fields.Selection(
         [
-            ("text", "Text"),
-            ("decimal", "Decimal"),
-            ("boolean", "Boolean"),
-            ("html", "HTML"),
+            ("trim", "Trim"),
+            ("uppercase", "Grossschreibung"),
+            ("lowercase", "Kleinschreibung"),
+            ("decimal_comma", "Dezimal-Komma zu Punkt"),
+            ("boolean_normalize", "Boolean normalisieren"),
+            ("html_clean", "HTML bereinigen"),
             ("integer", "Integer"),
-            ("date", "Date"),
+            ("slug", "Slug"),
             ("path", "Path"),
+            ("text", "Keine"),
         ],
-        default="text",
+        default="trim",
         required=True,
     )
     required = fields.Boolean(default=False)

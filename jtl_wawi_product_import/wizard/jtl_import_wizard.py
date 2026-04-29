@@ -1,16 +1,22 @@
 import re
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 TARGET_MODEL_SELECTION = [
     ("product.template", "Product Template"),
     ("product.product", "Product Variant"),
-    ("res.partner", "Partner"),
     ("product.category", "Product Category"),
+    ("product.public.category", "Website Category"),
+    ("res.partner", "Partner"),
     ("product.supplierinfo", "Supplierinfo"),
     ("product.attribute", "Product Attribute"),
+    ("product.attribute.value", "Attribute Value"),
+    ("mrp.bom", "BOM"),
+    ("mrp.bom.line", "BOM Line"),
+    ("jtl.product.attribute.raw", "JTL Attribute Raw"),
+    ("jtl.product.feature", "JTL Feature"),
     ("product.image", "Product Image"),
     ("account.tax", "Tax"),
     ("stock.quant", "Stock"),
@@ -31,6 +37,73 @@ SOURCE_FILE_SELECTION = [
 ]
 
 SOURCE_FILE_LABELS = dict(SOURCE_FILE_SELECTION)
+TARGET_MODEL_LABELS = dict(TARGET_MODEL_SELECTION)
+
+FILE_MODEL_WHITELIST = {
+    "article_master": ["product.template", "product.product", "product.category", "res.partner", "product.supplierinfo", "product.public.category", "website", "account.tax", "stock.quant"],
+    "manufacturer": ["res.partner"],
+    "eu_representative": ["res.partner"],
+    "category": ["product.category", "product.public.category", "website"],
+    "supplierinfo": ["res.partner", "product.supplierinfo", "product.template", "product.product"],
+    "variation_combination": ["product.product", "product.template", "product.attribute", "product.attribute.value"],
+    "variation_definition": ["product.attribute", "product.attribute.value", "product.template"],
+    "attribute": ["product.attribute", "product.attribute.value", "jtl.product.attribute.raw"],
+    "feature": ["product.template", "jtl.product.feature"],
+    "bom": ["mrp.bom", "mrp.bom.line", "product.template", "product.product"],
+}
+
+SUPPORTED_CUSTOM_FIELD_TYPES = [
+    ("char", "Char"),
+    ("text", "Text"),
+    ("html", "HTML"),
+    ("integer", "Integer"),
+    ("float", "Float"),
+    ("boolean", "Boolean"),
+    ("many2one", "Many2one"),
+]
+
+TTYPE_TRANSFORM_MAP = {
+    "char": "trim",
+    "text": "trim",
+    "html": "html_clean",
+    "integer": "integer",
+    "float": "decimal_comma",
+    "boolean": "boolean_normalize",
+    "many2one": "trim",
+}
+
+TRANSFORM_SELECTION = [
+    ("trim", "Trim"),
+    ("uppercase", "Grossschreibung"),
+    ("lowercase", "Kleinschreibung"),
+    ("decimal_comma", "Dezimal-Komma zu Punkt"),
+    ("html_clean", "HTML bereinigen"),
+    ("boolean_normalize", "Boolean normalisieren"),
+    ("slug", "Slug erzeugen"),
+    ("path", "Kategoriepfad erzeugen"),
+    ("ignore_empty", "Leere Werte ignorieren"),
+    ("text", "Keine"),
+]
+
+CODE_LIKE_HEADERS = {
+    "artikelnummer",
+    "kindartikelnummer",
+    "vaterartikelnummer",
+    "gtin",
+    "ean",
+    "han",
+    "tariccode",
+    "artikelnummerlieferant",
+    "lieferantennummer",
+}
+
+REQUIRED_COLUMN_ALIASES = {
+    "article_master": [("artikelnummer", _("Artikelnummer")), ("artikelname", _("Artikelname"))],
+    "variation_combination": [("kindartikelnummer", _("Kind Artikelnummer"))],
+    "supplierinfo": [("lieferant", _("Lieferant"))],
+    "bom": [("artikelnummerstuecklistenkomponente", _("Artikelnummer Stuecklistenkomponente"))],
+}
+
 
 def normalize_header_key(header):
     key = (header or "").strip().lower()
@@ -39,118 +112,53 @@ def normalize_header_key(header):
     key = re.sub(r"[^a-z0-9]+", "", key)
     return key
 
+
 AUTO_MAPPING_ALIASES = {
     "article_master": {
-        "artikelnummer": ("product.product", "default_code", "text"),
-        "sku": ("product.product", "default_code", "text"),
-        "ean": ("product.template", "barcode", "text"),
-        "gtin": ("product.template", "barcode", "text"),
-        "han": ("product.template", "manufacturer_sku", "text"),
-        "name": ("product.template", "name", "text"),
-        "artikelname": ("product.template", "name", "text"),
-        "gewicht": ("product.template", "weight", "decimal"),
-        "artikelgewicht": ("product.template", "weight", "decimal"),
-        "breite": ("product.template", "width", "decimal"),
-        "weite": ("product.template", "width", "decimal"),
-        "laenge": ("product.template", "length", "decimal"),
-        "lange": ("product.template", "length", "decimal"),
-        "tiefe": ("product.template", "length", "decimal"),
-        "hoehe": ("product.template", "height", "decimal"),
-        "hohe": ("product.template", "height", "decimal"),
-        "volumen": ("product.template", "volume", "decimal"),
-        "bruttopreis": ("product.template", "gross_sales_price", "decimal"),
-        "verkaufspreis": ("product.template", "sale_price", "decimal"),
-        "nettoek": ("product.template", "purchase_price", "decimal"),
-        "netto_ek": ("product.template", "purchase_price", "decimal"),
-        "steuersatz": ("account.tax", "tax_rate", "decimal"),
-        "kategorie": ("product.category", "category_path", "text"),
-        "hersteller": ("res.partner", "manufacturer_name", "text"),
-        "herstelleremail": ("res.partner", "manufacturer_email", "text"),
-        "herstellerwebsite": ("res.partner", "manufacturer_website", "text"),
-        "herstellerid": ("res.partner", "manufacturer_external_id", "text"),
-        "marke": ("product.template", "brand_name", "text"),
-        "brand": ("product.template", "brand_name", "text"),
-        "eurp": ("res.partner", "eu_responsible_name", "text"),
-        "eurepresentative": ("res.partner", "eu_responsible_name", "text"),
-        "eurepresentativeemail": ("res.partner", "eu_responsible_email", "text"),
-        "eurepresentativewebsite": ("res.partner", "eu_responsible_website", "text"),
-        "eurpid": ("res.partner", "eu_responsible_external_id", "text"),
-        "eurepresentativeid": ("res.partner", "eu_responsible_external_id", "text"),
+        "artikelnummer": ("product.product", "default_code", "char"),
+        "gtin": ("product.product", "barcode", "char"),
+        "ean": ("product.product", "barcode", "char"),
+        "artikelname": ("product.template", "name", "char"),
+        "name": ("product.template", "name", "char"),
+        "kurzbeschreibung": ("product.template", "description_sale", "text"),
+        "beschreibung": ("product.template", "website_description", "html"),
+        "bruttovk": ("product.template", "list_price", "float"),
+        "nettoek": ("product.template", "standard_price", "float"),
+        "artikelgewicht": ("product.template", "weight", "float"),
+        "tariccode": ("product.template", "hs_code", "char"),
+        "han": ("product.template", "x_jtl_han", "char"),
+        "uvp": ("product.template", "x_jtl_uvp", "float"),
+        "hersteller": ("product.template", "x_jtl_manufacturer_id", "many2one"),
+        "herkunftsland": ("product.template", "country_of_origin", "char"),
+        "urlpfad": ("product.template", "seo_path", "char"),
     },
-    "manufacturer": {
-        "name": ("res.partner", "name", "text"),
-        "hersteller": ("res.partner", "name", "text"),
-        "email": ("res.partner", "email", "text"),
-        "website": ("res.partner", "website", "text"),
-        "id": ("res.partner", "manufacturer_external_id", "text"),
-        "herstellerid": ("res.partner", "manufacturer_external_id", "text"),
+    "supplierinfo": {
+        "lieferant": ("res.partner", "name", "char"),
+        "artikelnummerlieferant": ("product.supplierinfo", "product_code", "char"),
+        "nettoek": ("product.supplierinfo", "price", "float"),
+        "mindestabnahmelieferant": ("product.supplierinfo", "min_qty", "float"),
     },
-    "eu_representative": {
-        "name": ("res.partner", "name", "text"),
-        "eurp": ("res.partner", "name", "text"),
-        "eurepresentative": ("res.partner", "name", "text"),
-        "email": ("res.partner", "email", "text"),
-        "website": ("res.partner", "website", "text"),
-        "id": ("res.partner", "eu_responsible_external_id", "text"),
-        "eurpid": ("res.partner", "eu_responsible_external_id", "text"),
+    "bom": {
+        "artikelnummer": ("mrp.bom", "product_id", "char"),
+        "artikelnummerstuecklistenkomponente": ("mrp.bom.line", "product_id", "char"),
+        "menge": ("mrp.bom.line", "product_qty", "float"),
+    },
+    "feature": {
+        "wert": ("product.template", "x_jtl_feature_value", "char"),
     },
 }
 
 CURATED_MODEL_FIELDS = {
-    "product.template": [
-        "name",
-        "barcode",
-        "weight",
-        "length",
-        "width",
-        "height",
-        "volume",
-        "active",
-        "list_price",
-        "standard_price",
-        "categ_id",
-        "description_sale",
-        "description",
-        "website_description",
-        "manufacturer_id",
-        "eu_responsible_partner_id",
-        "brand_id",
-        "manufacturer_partner_id",
-        "manufacturer_sku",
-        "parent_sku",
-        "seo_path",
-        "hs_code",
-        "meta_title",
-        "meta_description",
-        "country_of_origin",
-    ],
-    "product.product": [
-        "default_code",
-        "barcode",
-        "weight",
-        "active",
-        "parent_sku",
-    ],
-    "res.partner": [
-        "name",
-        "email",
-        "website",
-        "phone",
-        "mobile",
-        "street",
-        "street2",
-        "zip",
-        "city",
-        "country_id",
-        "is_company",
-        "is_manufacturer",
-        "manufacturer_external_id",
-        "is_eu_responsible",
-        "eu_responsible_external_id",
-    ],
+    "product.template": ["name", "barcode", "weight", "list_price", "standard_price", "categ_id", "description_sale", "description", "website_description", "manufacturer_id", "manufacturer_partner_id", "manufacturer_sku", "seo_path", "hs_code", "country_of_origin", "brand_id"],
+    "product.product": ["default_code", "barcode", "weight", "parent_sku", "active"],
     "product.category": ["name", "parent_id"],
-    "product.supplierinfo": ["partner_id", "product_tmpl_id", "product_id", "product_code", "price", "delay", "min_qty", "is_default_supplier"],
+    "product.public.category": ["name", "parent_id"],
+    "res.partner": ["name", "email", "website", "phone", "mobile", "street", "street2", "zip", "city", "country_id", "is_company", "is_manufacturer", "manufacturer_external_id", "is_eu_responsible", "eu_responsible_external_id"],
+    "product.supplierinfo": ["partner_id", "product_tmpl_id", "product_id", "product_code", "price", "delay", "min_qty"],
     "product.attribute": ["name", "create_variant"],
+    "product.attribute.value": ["name", "attribute_id"],
+    "mrp.bom": ["product_tmpl_id", "product_id", "code", "type"],
+    "mrp.bom.line": ["bom_id", "product_id", "product_qty"],
     "account.tax": ["amount", "name"],
     "stock.quant": ["inventory_quantity", "location_id"],
 }
@@ -197,6 +205,7 @@ class JtlImportWizard(models.TransientModel):
     profile_id = fields.Many2one("jtl.import.profile", string="Mapping Profile", domain="[('active', '=', True)]")
     save_profile = fields.Boolean(string="Save as Profile")
     profile_name = fields.Char(string="New Profile Name")
+    profile_description = fields.Text()
     mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Field Mapping")
     article_master_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Artikelstammdaten", domain=[("source_file_key", "=", "article_master")])
     manufacturer_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Herstellerdaten", domain=[("source_file_key", "=", "manufacturer")])
@@ -209,109 +218,39 @@ class JtlImportWizard(models.TransientModel):
     feature_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Merkmalsdaten", domain=[("source_file_key", "=", "feature")])
     bom_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Stueckliste", domain=[("source_file_key", "=", "bom")])
     headers_loaded = fields.Boolean(readonly=True)
-    wizard_step = fields.Selection(
-        [("files", "Files"), ("mapping", "Mapping"), ("review", "Review")],
-        default="files",
-        required=True,
-    )
+    mapping_validated = fields.Boolean(readonly=True)
+    wizard_step = fields.Selection([("files", "Files"), ("mapping", "Mapping"), ("review", "Review")], default="files", required=True)
 
     @api.depends("import_seo")
     def _compute_optional_module_status(self):
         module_model = self.env["ir.module.module"].sudo()
         module_states = {
             record["name"]: record["state"]
-            for record in module_model.search_read(
-                [("name", "in", ["contacts", "website_sale"])],
-                ["name", "state"],
-            )
+            for record in module_model.search_read([("name", "in", ["contacts", "website_sale"])], ["name", "state"])
         }
         for wizard in self:
             wizard.contacts_installed = module_states.get("contacts") == "installed"
             wizard.website_sale_installed = module_states.get("website_sale") == "installed"
             wizard.product_variants_enabled = self.env.user.has_group("product.group_product_variant")
 
-    @api.depends(
-        "contacts_installed",
-        "website_sale_installed",
-        "product_variants_enabled",
-        "import_seo",
-        "variation_combination_file_data",
-        "variation_definition_file_data",
-    )
+    @api.depends("contacts_installed", "website_sale_installed", "product_variants_enabled", "import_seo", "variation_combination_file_data", "variation_definition_file_data")
     def _compute_precheck_message(self):
         for wizard in self:
             messages = []
-            if wizard.contacts_installed:
-                messages.append(_("`contacts` is installed. Partner imports for manufacturers and suppliers are fully available."))
-            else:
-                messages.append(
-                    _("`contacts` is not installed. The import can still create partners, but the full Contacts UI is unavailable.")
-                )
-            if wizard.website_sale_installed:
-                messages.append(_("`website_sale` is installed. SEO and website fields can be imported."))
-            elif wizard.import_seo:
-                messages.append(
-                    _("`website_sale` is not installed. Disable SEO import or install `website_sale` before validating this run.")
-                )
-            else:
-                messages.append(_("`website_sale` is not installed. SEO fields will stay unavailable unless you install it."))
-            if wizard.variation_combination_file_data or wizard.variation_definition_file_data:
-                if wizard.product_variants_enabled:
-                    messages.append(_("Product variants are enabled. Variation files can be imported."))
-                else:
-                    messages.append(
-                        _("Product variants are not enabled. Activate Odoo variants before validating imports with variation files.")
-                    )
-            css_class = "alert-warning"
-            if (
-                wizard.contacts_installed
-                and (wizard.website_sale_installed or not wizard.import_seo)
-                and (
-                    wizard.product_variants_enabled
-                    or (not wizard.variation_combination_file_data and not wizard.variation_definition_file_data)
-                )
-            ):
-                css_class = "alert-info"
-            wizard.precheck_message = "<div class='alert %s' role='alert'><strong>%s</strong><br/>- %s</div>" % (
-                css_class,
+            messages.append(_("`contacts` installed: %s") % (_("Yes") if wizard.contacts_installed else _("No")))
+            messages.append(_("`website_sale` installed: %s") % (_("Yes") if wizard.website_sale_installed else _("No")))
+            messages.append(_("Product variants enabled: %s") % (_("Yes") if wizard.product_variants_enabled else _("No")))
+            wizard.precheck_message = "<div class='alert alert-info' role='alert'><strong>%s</strong><br/>- %s</div>" % (
                 _("Module Precheck"),
                 "<br/>- ".join(messages),
             )
 
-    def _get_mapping_lines_for_file(self, file_key):
-        self.ensure_one()
-        field_map = {
-            "article_master": "article_master_mapping_line_ids",
-            "manufacturer": "manufacturer_mapping_line_ids",
-            "eu_representative": "eu_representative_mapping_line_ids",
-            "category": "category_mapping_line_ids",
-            "supplierinfo": "supplierinfo_mapping_line_ids",
-            "variation_combination": "variation_combination_mapping_line_ids",
-            "variation_definition": "variation_definition_mapping_line_ids",
-            "attribute": "attribute_mapping_line_ids",
-            "feature": "feature_mapping_line_ids",
-            "bom": "bom_mapping_line_ids",
-        }
-        field_name = field_map.get(file_key)
-        return self[field_name] if field_name in self._fields else self.mapping_line_ids.filtered(lambda l: l.source_file_key == file_key)
-
     def _run_module_precheck(self):
         self.ensure_one()
         if self.import_seo and not self.website_sale_installed:
-            raise UserError(
-                _(
-                    "SEO import is enabled, but `website_sale` is not installed. Install `website_sale` first or disable SEO import."
-                )
-            )
-        if (
-            (self.variation_combination_file_data or self.variation_definition_file_data)
-            and not self.product_variants_enabled
-        ):
-            raise UserError(
-                _(
-                    "Variation files were uploaded, but Odoo product variants are not enabled. Activate variants first."
-                )
-            )
+            raise UserError(_("SEO import is enabled, but `website_sale` is not installed."))
+        if (self.variation_combination_file_data or self.variation_definition_file_data) and not self.product_variants_enabled:
+            raise UserError(_("Variation files were uploaded, but Odoo product variants are not enabled."))
 
     def _get_import_files(self):
         self.ensure_one()
@@ -320,97 +259,138 @@ class JtlImportWizard(models.TransientModel):
             data = getattr(self, "%s_file_data" % file_key)
             filename = getattr(self, "%s_file_name" % file_key)
             if data:
-                file_specs.append(
-                    {
-                        "file_key": file_key,
-                        "file_name": filename or ("%s.csv" % file_key),
-                        "file_data": data,
-                    }
-                )
+                file_specs.append({"file_key": file_key, "file_name": filename or ("%s.csv" % file_key), "file_data": data})
         return file_specs
 
-    def _get_default_mapping_lookup(self, file_key, headers):
+    def _get_default_mapping_lookup(self, file_key, column_keys, column_labels):
+        def _add_mapping(target, line):
+            target.setdefault(line.source_column, line)
+            label = getattr(line, "source_column_label", False) or line.source_column
+            if label and label not in target:
+                target[label] = line
+
+        lookup = {}
         if self.profile_id:
-            return {
-                line.source_column: line
-                for line in self.profile_id.line_ids.filtered(
-                    lambda l: l.active and l.source_file_key == file_key and l.source_column in headers
-                )
-            }
-        default_mappings = self.env["jtl.import.mapping"].search(
-            [("active", "=", True), ("source_file_key", "=", file_key), ("source_column", "in", headers)],
-            order="sequence, id",
-        )
-        mapping_by_column = {}
+            for line in self.profile_id.line_ids.filtered(lambda l: l.active and l.source_file_key == file_key):
+                _add_mapping(lookup, line)
+            return lookup
+        default_mappings = self.env["jtl.import.mapping"].search([("active", "=", True), ("source_file_key", "=", file_key)], order="sequence, id")
         for mapping in default_mappings:
-            mapping_by_column.setdefault(mapping.source_column, mapping)
-        return mapping_by_column
+            _add_mapping(lookup, mapping)
+        for label in column_labels:
+            if label in lookup:
+                continue
+            normalized = normalize_header_key(label)
+            for mapping in default_mappings:
+                if normalize_header_key(mapping.source_column) == normalized:
+                    lookup[label] = mapping
+                    break
+        return lookup
 
-    def _normalize_header_key(self, header):
-        return normalize_header_key(header)
+    def _guess_field_type(self, column_label, values, sample_value):
+        normalized_label = normalize_header_key(column_label)
+        if normalized_label in CODE_LIKE_HEADERS:
+            return "char"
+        values = [value for value in (values or []) if value not in (None, False, "")]
+        sample_text = (sample_value or "").strip()
+        if sample_text and re.search(r"<[^>]+>", sample_text):
+            return "html"
+        if values and all((value or "").strip().lower() in {"ja", "nein", "1", "0", "true", "false", "yes", "no", "x"} for value in values):
+            return "boolean"
+        if values and all(re.match(r"^\d{4}-\d{2}-\d{2}$", value.strip()) for value in values if value.strip()):
+            return "char"
+        if values and all(re.match(r"^-?\d+(?:[.,]\d+)?$", value.replace(" ", "")) for value in values if value.strip()):
+            if any("," in value or "." in value for value in values):
+                return "float"
+            if normalized_label in CODE_LIKE_HEADERS or any(value.startswith("0") and len(value) > 1 for value in values):
+                return "char"
+            return "integer"
+        if len(sample_text) > 120:
+            return "text"
+        return "char"
 
-    def _guess_mapping_for_column(self, file_key, header):
-        alias = AUTO_MAPPING_ALIASES.get(file_key, {}).get(self._normalize_header_key(header))
+    def _guess_transform_logic(self, ttype):
+        return TTYPE_TRANSFORM_MAP.get(ttype, "trim")
+
+    def _guess_mapping_for_column(self, file_key, column_label, sample_value, values):
+        normalized = normalize_header_key(column_label)
+        alias = AUTO_MAPPING_ALIASES.get(file_key, {}).get(normalized)
+        guessed_ttype = self._guess_field_type(column_label, values, sample_value)
         if not alias:
-            return {}
-        target_model, target_field_name, transform_logic = alias
+            return {"custom_field_ttype": guessed_ttype, "transform_logic": self._guess_transform_logic(guessed_ttype)}
+        target_model, target_field_name, default_ttype = alias
+        target_field_name = target_field_name.strip()
+        guessed_ttype = default_ttype or guessed_ttype
         target_field_id = False
         if target_model != "website":
-            target_field = self.env["ir.model.fields"].search(
-                [("model", "=", target_model), ("name", "=", target_field_name)],
-                limit=1,
-            )
+            target_field = self.env["ir.model.fields"].search([("model", "=", target_model), ("name", "=", target_field_name)], limit=1)
             target_field_id = target_field.id if target_field else False
-        return {
+        values = {
             "target_model": target_model,
             "target_field_id": target_field_id,
             "target_field_name": target_field_name,
-            "transform_logic": transform_logic,
+            "custom_field_ttype": guessed_ttype,
+            "transform_logic": self._guess_transform_logic(guessed_ttype),
+            "import_enabled": True,
             "active": True,
         }
+        if target_field_name.startswith("x_") and not target_field_id:
+            values["create_field_if_missing"] = True
+        return values
 
-    def _build_mapping_lines(self, headers_by_file):
+    def _build_mapping_lines(self, analysis_by_file):
         line_commands = [(5, 0, 0)]
         sequence = 1
         for file_key, _label in SOURCE_FILE_SELECTION:
-            headers = headers_by_file.get(file_key) or []
-            if not headers:
+            analysis_lines = analysis_by_file.get(file_key) or []
+            if not analysis_lines:
                 continue
-            mapping_by_column = self._get_default_mapping_lookup(file_key, headers)
-            for header in headers:
-                mapping = mapping_by_column.get(header)
+            required_aliases = {alias for alias, _label in REQUIRED_COLUMN_ALIASES.get(file_key, [])}
+            mapping_by_key = self._get_default_mapping_lookup(
+                file_key,
+                [item["source_column"] for item in analysis_lines],
+                [item["source_column_label"] for item in analysis_lines],
+            )
+            for item in analysis_lines:
+                mapping = mapping_by_key.get(item["source_column"]) or mapping_by_key.get(item["source_column_label"])
+                guessed = {} if mapping else self._guess_mapping_for_column(file_key, item["source_column_label"], item["sample_value"], item.get("values"))
                 target_field_id = False
-                target_field_name = mapping.target_field if mapping else False
-                if mapping and mapping.target_model != "website":
-                    target_field = self.env["ir.model.fields"].search(
-                        [("model", "=", mapping.target_model), ("name", "=", mapping.target_field)],
-                        limit=1,
-                    )
-                    target_field_id = target_field.id if target_field else False
-                guessed_mapping = self._guess_mapping_for_column(file_key, header) if not mapping else {}
-                line_commands.append(
-                    (
-                        0,
-                        0,
-                        {
-                            "sequence": sequence * 10,
-                            "source_file_key": file_key,
-                            "source_column": header,
-                            "target_model": mapping.target_model if mapping else guessed_mapping.get("target_model"),
-                            "target_field_id": target_field_id or guessed_mapping.get("target_field_id"),
-                            "target_field_name": target_field_name or guessed_mapping.get("target_field_name"),
-                            "language_code": mapping.language_code if mapping else False,
-                            "transform_logic": mapping.transform_logic if mapping else guessed_mapping.get("transform_logic", "text"),
-                            "required": mapping.required if mapping else False,
-                            "active": bool(mapping) or bool(guessed_mapping.get("active")),
-                            "default_value": mapping.default_value if mapping else False,
-                        },
-                    )
-                )
+                target_field_name = False
+                if mapping:
+                    target_field_name = mapping.target_field
+                    if mapping.target_model != "website":
+                        target_field = self.env["ir.model.fields"].search([("model", "=", mapping.target_model), ("name", "=", mapping.target_field)], limit=1)
+                        target_field_id = target_field.id if target_field else False
+                values = {
+                    "sequence": sequence * 10,
+                    "source_file_key": file_key,
+                    "source_column": item["source_column"],
+                    "source_column_label": item["source_column_label"],
+                    "sample_value": item["sample_value"],
+                    "detected_ttype": self._guess_field_type(item["source_column_label"], item.get("values"), item["sample_value"]),
+                    "target_model": mapping.target_model if mapping else guessed.get("target_model"),
+                    "target_field_id": target_field_id or guessed.get("target_field_id"),
+                    "target_field_name": target_field_name or guessed.get("target_field_name"),
+                    "custom_field_ttype": getattr(mapping, "new_field_type", False) or guessed.get("custom_field_ttype", "char"),
+                    "transform_logic": mapping.transform_logic if mapping else guessed.get("transform_logic", "trim"),
+                    "required": bool(getattr(mapping, "required", False)) or normalize_header_key(item["source_column_label"]) in required_aliases,
+                    "active": bool(mapping) or bool(guessed.get("active")),
+                    "import_enabled": getattr(mapping, "import_enabled", True) if mapping else guessed.get("import_enabled", True),
+                    "default_value": getattr(mapping, "default_value", False) if mapping else False,
+                    "create_field_if_missing": getattr(mapping, "create_field", False) if mapping else guessed.get("create_field_if_missing", False),
+                    "new_field_name": getattr(mapping, "new_field_name", False) if mapping else False,
+                    "new_field_label": getattr(mapping, "new_field_label", False) if mapping else item["source_column_label"],
+                    "relation_model": getattr(mapping, "relation_model", False) if mapping else False,
+                }
+                line_commands.append((0, 0, values))
                 sequence += 1
         self.mapping_line_ids = line_commands
         self.headers_loaded = True
+        self.mapping_validated = False
         self.wizard_step = "mapping"
+
+    def _reopen_wizard(self):
+        return {"type": "ir.actions.act_window", "name": _("New JTL Import"), "res_model": "jtl.import.wizard", "res_id": self.id, "view_mode": "form", "target": "current"}
 
     def action_load_columns(self):
         self.ensure_one()
@@ -418,31 +398,34 @@ class JtlImportWizard(models.TransientModel):
         file_specs = self._get_import_files()
         if not file_specs:
             raise UserError(_("Please upload at least one CSV file first."))
-        headers_by_file = self.env["jtl.import.parser"].extract_headers_bundle(file_specs)
-        self._build_mapping_lines(headers_by_file)
+        analysis_by_file = self.env["jtl.import.parser"].analyze_bundle(file_specs)
+        self._build_mapping_lines(analysis_by_file)
         return self._reopen_wizard()
 
     def action_apply_profile(self):
         self.ensure_one()
-        self._run_module_precheck()
-        file_specs = self._get_import_files()
-        if not file_specs:
-            raise UserError(_("Please upload at least one CSV file first."))
         if not self.profile_id:
             raise UserError(_("Please select a mapping profile first."))
-        headers_by_file = self.env["jtl.import.parser"].extract_headers_bundle(file_specs)
-        self._build_mapping_lines(headers_by_file)
-        return self._reopen_wizard()
+        return self.action_load_columns()
 
-    def _reopen_wizard(self):
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("New JTL Import"),
-            "res_model": "jtl.import.wizard",
-            "res_id": self.id,
-            "view_mode": "form",
-            "target": "current",
-        }
+    def action_use_default_profile(self):
+        self.ensure_one()
+        default_profile = self.env["jtl.import.profile"].search(
+            [("is_default", "=", True), "|", ("company_id", "=", False), ("company_id", "=", self.env.company.id)],
+            limit=1,
+        )
+        if not default_profile:
+            raise UserError(_("No default mapping profile was found."))
+        self.profile_id = default_profile
+        return self.action_load_columns()
+
+    def action_reset_mapping(self):
+        self.ensure_one()
+        self.mapping_line_ids = [(5, 0, 0)]
+        self.headers_loaded = False
+        self.mapping_validated = False
+        self.wizard_step = "files"
+        return self._reopen_wizard()
 
     def action_previous_step(self):
         self.ensure_one()
@@ -453,11 +436,9 @@ class JtlImportWizard(models.TransientModel):
     def action_next_step(self):
         self.ensure_one()
         if self.wizard_step == "files":
-            self.action_load_columns()
-            return self._reopen_wizard()
+            return self.action_load_columns()
         if self.wizard_step == "mapping":
-            if not self.mapping_line_ids:
-                self.action_load_columns()
+            self.action_check_mapping()
             self.wizard_step = "review"
         return self._reopen_wizard()
 
@@ -471,6 +452,7 @@ class JtlImportWizard(models.TransientModel):
         profile = self.env["jtl.import.profile"].create(
             {
                 "name": profile_name,
+                "description": self.profile_description,
                 "company_id": self.env.company.id,
                 "line_ids": [
                     (
@@ -480,36 +462,59 @@ class JtlImportWizard(models.TransientModel):
                             "sequence": line.sequence,
                             "source_file_key": line.source_file_key,
                             "source_column": line.source_column,
+                            "source_column_label": line.source_column_label,
+                            "sample_value": line.sample_value,
                             "target_model": line.target_model,
                             "target_field": line.target_field_id.name or line.target_field_name,
-                            "language_code": line.language_id.code if line.language_id else line.language_code,
+                            "create_field": line.create_field_if_missing,
+                            "new_field_name": line.new_field_name,
+                            "new_field_label": line.new_field_label,
+                            "new_field_type": line.custom_field_ttype,
+                            "relation_model": line.relation_model,
+                            "language_code": (line.language_id.code if line.language_id else line.language_code) or False,
                             "transform_logic": line.transform_logic,
                             "required": line.required,
                             "active": line.active,
                             "default_value": line.default_value,
+                            "import_enabled": line.import_enabled,
                         },
                     )
                     for line in self.mapping_line_ids
-                    if line.target_model and (line.target_field_id or line.target_field_name)
+                    if line.target_model and (line.target_field_id or line.target_field_name or line.new_field_name)
                 ],
             }
         )
         self.profile_id = profile
         return profile
 
+    def _check_required_mapping_aliases(self):
+        for file_key, requirements in REQUIRED_COLUMN_ALIASES.items():
+            file_lines = self.mapping_line_ids.filtered(lambda line: line.source_file_key == file_key)
+            for alias, label in requirements:
+                matched = file_lines.filtered(
+                    lambda line: line.active
+                    and line.import_enabled
+                    and line.target_model
+                    and (line.target_field_id or line.target_field_name)
+                    and normalize_header_key(line.source_column_label or line.source_column) == alias
+                )
+                if not matched:
+                    raise UserError(_("Pflichtmapping fehlt: %s wurde keinem Odoo-Feld zugeordnet.") % label)
+
     def _get_selected_mapping_specs(self):
         self.ensure_one()
         self.mapping_line_ids._ensure_dynamic_fields()
         specs = []
-        for line in self.mapping_line_ids.filtered("active"):
+        for line in self.mapping_line_ids.filtered(lambda record: record.active and record.import_enabled):
             target_field = line.target_field_id.name or line.target_field_name
             if not line.target_model or not target_field:
-                raise UserError(_("Please complete the mapping for column '%s'.") % line.source_column)
+                raise UserError(_("Please complete the mapping for column '%s'.") % (line.source_column_label or line.source_column))
             specs.append(
                 {
                     "sequence": line.sequence,
                     "source_file_key": line.source_file_key,
                     "source_column": line.source_column,
+                    "source_column_label": line.source_column_label,
                     "target_model": line.target_model,
                     "target_field": target_field,
                     "language_code": (line.language_id.code if line.language_id else line.language_code) or False,
@@ -522,6 +527,14 @@ class JtlImportWizard(models.TransientModel):
             raise UserError(_("Please activate and map at least one CSV column."))
         return specs
 
+    def action_check_mapping(self):
+        self.ensure_one()
+        self.mapping_line_ids._validate_lines()
+        self._check_required_mapping_aliases()
+        self.mapping_line_ids._ensure_dynamic_fields()
+        self.mapping_validated = True
+        return self._reopen_wizard()
+
     def action_validate(self):
         self.ensure_one()
         self._run_module_precheck()
@@ -530,6 +543,7 @@ class JtlImportWizard(models.TransientModel):
             raise UserError(_("Please upload at least one CSV file first."))
         if not self.mapping_line_ids:
             self.action_load_columns()
+        self.action_check_mapping()
         self.wizard_step = "review"
         mapping_specs = self._get_selected_mapping_specs()
         self._save_profile_from_lines()
@@ -555,20 +569,12 @@ class JtlImportWizard(models.TransientModel):
         run.write(
             {
                 "state": "validated",
-                "validation_message": _("%s product groups from %s file(s) are staged and ready for queueing.")
-                % (len(payload.get("skus", [])), len(file_specs)),
+                "validation_message": _("%s product groups from %s file(s) are staged and ready for queueing.") % (len(payload.get("skus", [])), len(file_specs)),
             }
         )
         if payload.get("warnings"):
             run._append_logs(payload["warnings"])
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("JTL Import Run"),
-            "res_model": "jtl.import.run",
-            "res_id": run.id,
-            "view_mode": "form",
-            "target": "current",
-        }
+        return {"type": "ir.actions.act_window", "name": _("JTL Import Run"), "res_model": "jtl.import.run", "res_id": run.id, "view_mode": "form", "target": "current"}
 
     def action_validate_and_queue(self):
         action = self.action_validate()
@@ -586,61 +592,84 @@ class JtlImportWizardLine(models.TransientModel):
     sequence = fields.Integer(default=10)
     source_file_key = fields.Selection(SOURCE_FILE_SELECTION, required=True, default="article_master", readonly=True)
     source_column = fields.Char(required=True, readonly=True)
+    source_column_label = fields.Char(readonly=True)
+    sample_value = fields.Char(readonly=True)
     target_model = fields.Selection(TARGET_MODEL_SELECTION)
     source_file_label = fields.Char(compute="_compute_source_file_label")
+    available_model_keys = fields.Char(compute="_compute_available_model_keys")
     available_field_ids = fields.Many2many("ir.model.fields", compute="_compute_available_field_ids")
     target_field_id = fields.Many2one("ir.model.fields", string="Odoo Field", domain="[('id', 'in', available_field_ids)]")
     target_field_name = fields.Char(string="Target Field")
     create_field_if_missing = fields.Boolean(string="Create Field")
+    new_field_name = fields.Char()
+    new_field_label = fields.Char()
+    relation_model = fields.Char()
     relation_hint = fields.Char(compute="_compute_relation_hint")
-    custom_field_ttype = fields.Selection(
-        [
-            ("char", "Text"),
-            ("text", "Long Text"),
-            ("html", "HTML"),
-            ("float", "Decimal"),
-            ("integer", "Integer"),
-            ("boolean", "Boolean"),
-            ("date", "Date"),
-        ],
-        default="char",
-    )
+    target_model_label = fields.Char(compute="_compute_target_model_label")
+    detected_ttype = fields.Selection(SUPPORTED_CUSTOM_FIELD_TYPES, string="Detected Field Type")
+    custom_field_ttype = fields.Selection(SUPPORTED_CUSTOM_FIELD_TYPES, default="char")
     language_code = fields.Char()
-    language_id = fields.Many2one(
-        "res.lang",
-        string="Sprache",
-        compute="_compute_language_id",
-        inverse="_inverse_language_id",
-        readonly=False,
-        domain=[("active", "=", True)],
-    )
-    transform_logic = fields.Selection(
-        [
-            ("text", "Text"),
-            ("decimal", "Decimal"),
-            ("boolean", "Boolean"),
-            ("html", "HTML"),
-            ("integer", "Integer"),
-            ("date", "Date"),
-            ("path", "Path"),
-        ],
-        default="text",
-        required=True,
-    )
+    language_id = fields.Many2one("res.lang", string="Sprache", compute="_compute_language_id", inverse="_inverse_language_id", readonly=False, domain=[("active", "=", True)])
+    transform_logic = fields.Selection(TRANSFORM_SELECTION, default="trim", required=True)
     required = fields.Boolean(default=False)
     active = fields.Boolean(default=False)
+    import_enabled = fields.Boolean(default=True)
     default_value = fields.Char()
+    field_required = fields.Boolean(compute="_compute_field_metadata")
+    target_field_ttype = fields.Char(compute="_compute_field_metadata")
+    status = fields.Selection([("valid", "Valid"), ("warning", "Warning"), ("error", "Error"), ("ignored", "Ignored")], compute="_compute_status")
+    note = fields.Char(compute="_compute_status")
 
     @api.depends("source_file_key")
     def _compute_source_file_label(self):
         for line in self:
             line.source_file_label = SOURCE_FILE_LABELS.get(line.source_file_key, line.source_file_key)
 
+    @api.depends("source_file_key")
+    def _compute_available_model_keys(self):
+        for line in self:
+            line.available_model_keys = ",".join(FILE_MODEL_WHITELIST.get(line.source_file_key, []))
+
+    @api.depends("target_model")
+    def _compute_target_model_label(self):
+        for line in self:
+            line.target_model_label = TARGET_MODEL_LABELS.get(line.target_model, line.target_model or "")
+
     @api.onchange("target_field_id")
     def _onchange_target_field_id(self):
         for line in self:
             if line.target_field_id:
                 line.target_field_name = line.target_field_id.name
+                if line.target_field_id.ttype in dict(SUPPORTED_CUSTOM_FIELD_TYPES):
+                    line.custom_field_ttype = line.target_field_id.ttype
+                if line.target_field_id.ttype == "many2one":
+                    line.relation_model = line.target_field_id.relation
+
+    @api.onchange("source_column_label", "create_field_if_missing")
+    def _onchange_source_column_generate_field(self):
+        for line in self:
+            if line.create_field_if_missing and not line.target_field_id and not line.new_field_name:
+                sanitized = re.sub(r"[^a-z0-9_]+", "_", (line.source_column_label or line.source_column or "").strip().lower())
+                sanitized = re.sub(r"_+", "_", sanitized).strip("_")
+                if sanitized and not sanitized.startswith("x_"):
+                    sanitized = "x_jtl_%s" % sanitized
+                line.new_field_name = sanitized
+                if not line.new_field_label:
+                    line.new_field_label = line.source_column_label
+
+    @api.onchange("target_model")
+    def _onchange_target_model(self):
+        for line in self:
+            if line.target_model and line.target_model not in FILE_MODEL_WHITELIST.get(line.source_file_key, []):
+                line.target_model = False
+                line.target_field_id = False
+                line.target_field_name = False
+                return {
+                    "warning": {
+                        "title": _("Invalid model"),
+                        "message": _("The selected model is not allowed for this CSV file type."),
+                    }
+                }
 
     @api.depends("target_model")
     def _compute_available_field_ids(self):
@@ -655,42 +684,45 @@ class JtlImportWizardLine(models.TransientModel):
             custom = ir_model_fields.search(base_domain + [("name", "=like", "x_%")])
             line.available_field_ids = [(6, 0, (curated | custom).ids)]
 
-    @api.depends("source_file_key", "source_column", "target_model", "target_field_id", "target_field_name")
+    @api.depends("source_file_key", "source_column_label", "target_model", "target_field_id", "target_field_name")
     def _compute_relation_hint(self):
-        parent_markers = {
-            "istvaterartikel",
-            "vaterartikelnummer",
-            "identifizierungsspaltevaterartikel",
-        }
-        child_markers = {
-            "kindartikelnummer",
-            "childsku",
-            "kindartikel",
-        }
         for line in self:
-            normalized = normalize_header_key(line.source_column)
-            if line.source_file_key == "article_master" and normalized in parent_markers:
-                line.relation_hint = _("Parent marker. Child rows are linked via `Vaterartikelnummer` / `parent_sku`.")
-            elif normalized in child_markers:
-                line.relation_hint = _("Child article SKU. Used to link variants to the parent.")
-            elif line.source_file_key == "supplierinfo" and normalized in {"lieferant", "suppliername", "vendor", "vendorname"}:
-                line.relation_hint = _("Supplier matched by name. Supplierinfo will be linked to the vendor partner.")
-            elif line.target_field_id and line.target_field_id.name == "parent_sku":
-                line.relation_hint = _("Parent SKU detected. This row will be attached to a parent product.")
-            elif line.target_field_id and line.target_field_id.name == "is_parent":
-                line.relation_hint = _("Parent flag detected. Child products are resolved from the parent reference.")
+            normalized = normalize_header_key(line.source_column_label or line.source_column)
+            if line.source_file_key == "variation_combination" and normalized == "kindartikelnummer":
+                line.relation_hint = _("Variant child SKU.")
+            elif line.source_file_key == "bom" and normalized == "artikelnummerstuecklistenkomponente":
+                line.relation_hint = _("BOM component reference.")
+            elif line.source_file_key == "supplierinfo" and normalized == "lieferant":
+                line.relation_hint = _("Supplier matched by name and created when missing.")
+            elif line.target_field_id and line.target_field_id.ttype == "many2one":
+                line.relation_hint = _("Relational value will be resolved or created during import.")
             else:
                 line.relation_hint = False
 
-    @api.onchange("source_column", "create_field_if_missing")
-    def _onchange_source_column_generate_field(self):
+    @api.depends("target_field_id")
+    def _compute_field_metadata(self):
         for line in self:
-            if line.create_field_if_missing and not line.target_field_id and not line.target_field_name and line.source_column:
-                sanitized = re.sub(r"[^a-z0-9_]+", "_", line.source_column.strip().lower())
-                sanitized = re.sub(r"_+", "_", sanitized).strip("_")
-                if sanitized and not sanitized.startswith("x_"):
-                    sanitized = "x_%s" % sanitized
-                line.target_field_name = sanitized
+            line.field_required = bool(line.target_field_id and line.target_field_id.required)
+            line.target_field_ttype = line.target_field_id.ttype if line.target_field_id else False
+
+    @api.depends("active", "import_enabled", "target_model", "target_field_id", "target_field_name", "create_field_if_missing", "new_field_name")
+    def _compute_status(self):
+        for line in self:
+            if not line.active or not line.import_enabled:
+                line.status = "ignored"
+                line.note = _("Ignored")
+            elif line.create_field_if_missing and not line.new_field_name:
+                line.status = "error"
+                line.note = _("New field name is missing.")
+            elif not line.target_model:
+                line.status = "warning"
+                line.note = _("Model missing.")
+            elif not (line.target_field_id or line.target_field_name or line.new_field_name):
+                line.status = "warning"
+                line.note = _("Field missing.")
+            else:
+                line.status = "valid"
+                line.note = _("Ready")
 
     @api.depends("language_code")
     def _compute_language_id(self):
@@ -702,30 +734,51 @@ class JtlImportWizardLine(models.TransientModel):
         for line in self:
             line.language_code = line.language_id.code if line.language_id else False
 
+    def _validate_lines(self):
+        allowed_ttypes = {key for key, _label in SUPPORTED_CUSTOM_FIELD_TYPES}
+        model_names = self.env["ir.model"].search([]).mapped("model")
+        for line in self.filtered(lambda record: record.active and record.import_enabled):
+            if line.target_model not in FILE_MODEL_WHITELIST.get(line.source_file_key, []):
+                raise ValidationError(_("Model %s is not allowed for file type %s.") % (line.target_model, line.source_file_label))
+            if line.create_field_if_missing:
+                technical_name = (line.new_field_name or line.target_field_name or "").strip()
+                if not technical_name.startswith("x_"):
+                    raise ValidationError(_("Custom field names must start with x_: %s") % technical_name)
+                if line.custom_field_ttype not in allowed_ttypes:
+                    raise ValidationError(_("Field type %s is not supported.") % line.custom_field_ttype)
+                if line.custom_field_ttype == "many2one" and not line.relation_model:
+                    raise ValidationError(_("Many2one field %s requires a relation model.") % technical_name)
+                if line.relation_model and line.relation_model not in model_names:
+                    raise ValidationError(_("Relation model %s does not exist.") % line.relation_model)
+
     def _ensure_dynamic_fields(self):
-        for line in self.filtered(lambda l: l.active and l.create_field_if_missing and l.target_model and l.target_field_name and not l.target_field_id):
+        self._validate_lines()
+        for line in self.filtered(lambda l: l.active and l.import_enabled and l.create_field_if_missing and l.target_model):
             if line.target_model == "website":
                 continue
+            technical_name = (line.new_field_name or line.target_field_name or "").strip()
             model_record = self.env["ir.model"].search([("model", "=", line.target_model)], limit=1)
             if not model_record:
+                raise ValidationError(_("Model %s was not found.") % line.target_model)
+            existing = self.env["ir.model.fields"].search([("model", "=", line.target_model), ("name", "=", technical_name)], limit=1)
+            if existing:
+                if existing.ttype != line.custom_field_ttype:
+                    raise ValidationError(_("Field %s exists already with type %s instead of %s.") % (technical_name, existing.ttype, line.custom_field_ttype))
+                if line.custom_field_ttype == "many2one" and existing.relation != line.relation_model:
+                    raise ValidationError(_("Field %s exists already with relation %s instead of %s.") % (technical_name, existing.relation, line.relation_model))
+                line.target_field_id = existing
+                line.target_field_name = existing.name
                 continue
-            technical_name = line.target_field_name.strip()
-            if not technical_name.startswith("x_"):
-                technical_name = "x_%s" % technical_name
-            existing = self.env["ir.model.fields"].search(
-                [("model", "=", line.target_model), ("name", "=", technical_name)],
-                limit=1,
-            )
-            if not existing:
-                existing = self.env["ir.model.fields"].create(
-                    {
-                        "name": technical_name,
-                        "field_description": line.source_column,
-                        "model_id": model_record.id,
-                        "model": line.target_model,
-                        "ttype": line.custom_field_ttype,
-                        "state": "manual",
-                    }
-                )
-            line.target_field_id = existing
-            line.target_field_name = existing.name
+            create_vals = {
+                "name": technical_name,
+                "field_description": line.new_field_label or line.source_column_label or line.source_column,
+                "model_id": model_record.id,
+                "model": line.target_model,
+                "ttype": line.custom_field_ttype,
+                "state": "manual",
+            }
+            if line.custom_field_ttype == "many2one":
+                create_vals["relation"] = line.relation_model
+            created = self.env["ir.model.fields"].create(create_vals)
+            line.target_field_id = created
+            line.target_field_name = created.name
