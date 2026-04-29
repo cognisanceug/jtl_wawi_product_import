@@ -80,7 +80,8 @@
                                 <field name="detected_ttype" string="Erkannt"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="target_field_ttype" string="Feldtyp" readonly="1"/>
                                 <field name="field_required" string="Pflichtfeld" readonly="1"/>
                                 <field name="create_field_if_missing" string="Neues Feld" readonly="is_reserved"/>
@@ -89,7 +90,6 @@
                                 <field name="custom_field_ttype" string="Neuer Feldtyp" readonly="is_reserved"/>
                                 <field name="relation_model" invisible="custom_field_ttype != 'many2one'" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
-                                <field name="relation_hint" string="Hinweis" readonly="1"/>
                                 <field name="status" readonly="1"/>
                                 <field name="note" readonly="1"/>
                             </list>
@@ -106,14 +106,14 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
-                                <field name="relation_hint" string="Hinweis" readonly="1"/>
-                            </list>
+                                </list>
                         </field>
                     </page>
                     <page string="EU-RP">
@@ -127,11 +127,11 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
-                                <field name="relation_hint" string="Hinweis" readonly="1"/>
-                            </list>
+                                </list>
                         </field>
                     </page>
                     <page string="Kategorien">
@@ -145,14 +145,14 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
-                                <field name="relation_hint" string="Hinweis" readonly="1"/>
-                            </list>
+                                </list>
                         </field>
                     </page>
                     <page string="Lieferantenartikel">
@@ -166,11 +166,11 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
-                                <field name="relation_hint" readonly="1"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
@@ -187,9 +187,9 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
-                                <field name="relation_hint" readonly="1"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -205,11 +205,11 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
-                                <field name="relation_hint" string="Hinweis" readonly="1"/>
-                            </list>
+                                </list>
                         </field>
                     </page>
                     <page string="Attribute">
@@ -223,14 +223,14 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
-                                <field name="relation_hint" string="Hinweis" readonly="1"/>
-                            </list>
+                                </list>
                         </field>
                     </page>
                     <page string="Eigene Merkmale">
@@ -244,14 +244,14 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
-                                <field name="relation_hint" string="Hinweis" readonly="1"/>
-                            </list>
+                                </list>
                         </field>
                     </page>
                     <page string="Stueckliste">
@@ -265,9 +265,9 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
-                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
-                                <field name="relation_hint" readonly="1"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
