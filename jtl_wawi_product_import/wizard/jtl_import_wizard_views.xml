@@ -79,6 +79,7 @@
                                 <field name="detected_ttype" string="Erkannt"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="target_field_ttype" string="Feldtyp" readonly="1"/>
                                 <field name="field_required" string="Pflichtfeld" readonly="1"/>
                                 <field name="create_field_if_missing" string="Neues Feld" readonly="is_reserved"/>
@@ -104,11 +105,13 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
+                                <field name="relation_hint" string="Hinweis" readonly="1"/>
                             </list>
                         </field>
                     </page>
@@ -123,8 +126,10 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
+                                <field name="relation_hint" string="Hinweis" readonly="1"/>
                             </list>
                         </field>
                     </page>
@@ -139,11 +144,13 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
+                                <field name="relation_hint" string="Hinweis" readonly="1"/>
                             </list>
                         </field>
                     </page>
@@ -158,6 +165,7 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
@@ -178,6 +186,7 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="relation_hint" readonly="1"/>
                                 <field name="note" readonly="1"/>
@@ -195,8 +204,10 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
+                                <field name="relation_hint" string="Hinweis" readonly="1"/>
                             </list>
                         </field>
                     </page>
@@ -211,11 +222,13 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
+                                <field name="relation_hint" string="Hinweis" readonly="1"/>
                             </list>
                         </field>
                     </page>
@@ -230,11 +243,13 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="create_field_if_missing" readonly="is_reserved"/>
                                 <field name="new_field_name" readonly="is_reserved"/>
                                 <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
+                                <field name="relation_hint" string="Hinweis" readonly="1"/>
                             </list>
                         </field>
                     </page>
@@ -249,6 +264,7 @@
                                 <field name="detected_ttype"/>
                                 <field name="target_model" readonly="is_reserved"/>
                                 <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target Pseudo" optional="hide" readonly="is_reserved"/>
                                 <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="relation_hint" readonly="1"/>
                                 <field name="note" readonly="1"/>

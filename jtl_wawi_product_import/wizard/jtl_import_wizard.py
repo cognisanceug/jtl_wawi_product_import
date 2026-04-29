@@ -120,6 +120,21 @@ RESERVED_COLUMN_KEYS = {
     "istvaterartikel": _("Reserved — JTL parent flag, derived automatically from variant linkage"),
 }
 
+# Hints rendered for pseudo target_field names that the processor
+# resolves into a real Odoo relation during import. Shown in the
+# 'Hinweis' column so the user understands what happens with the
+# string value at import time.
+PSEUDO_FIELD_HINTS = {
+    "brand_name": _("→ Lookup product.brand by name (created if missing)"),
+    "manufacturer_name": _("→ Lookup res.partner manufacturer by name (created if missing)"),
+    "eu_responsible_name": _("→ Lookup res.partner EU representative by name (created if missing)"),
+    "category_path": _("→ Lookup/create product.category hierarchy from path"),
+    "country_of_origin": _("→ Lookup res.country by name or ISO code"),
+    "parent_sku": _("→ Variant linkage: matches parent product by SKU"),
+    "gross_sales_price": _("→ Gross price; converted to list_price via tax_rate"),
+    "tax_rate": _("→ Tax rate used for gross→net price conversion"),
+}
+
 
 def normalize_header_key(header):
     key = (header or "").strip().lower()
@@ -718,7 +733,11 @@ class JtlImportWizardLine(models.TransientModel):
     def _compute_relation_hint(self):
         for line in self:
             normalized = normalize_header_key(line.source_column_label or line.source_column)
-            if line.source_file_key == "variation_combination" and normalized == "kindartikelnummer":
+            target_field_name = (line.target_field_name or "").strip()
+            pseudo_hint = PSEUDO_FIELD_HINTS.get(target_field_name)
+            if pseudo_hint:
+                line.relation_hint = pseudo_hint
+            elif line.source_file_key == "variation_combination" and normalized == "kindartikelnummer":
                 line.relation_hint = _("Variant child SKU.")
             elif line.source_file_key == "bom" and normalized == "artikelnummerstuecklistenkomponente":
                 line.relation_hint = _("BOM component reference.")
