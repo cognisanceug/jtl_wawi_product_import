@@ -1,6 +1,6 @@
 {
     "name": "JTL-Wawi Product Import",
-    "version": "19.0.1.0.26",
+    "version": "19.0.1.0.27",
     "category": "Inventory",
     "summary": "Import von JTL-Wawi CSV-Dateien mit gestufter Hintergrundverarbeitung.",
     "author": "Cognisance UG",
