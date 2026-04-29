@@ -16,7 +16,6 @@
                         <field name="length"/>
                         <field name="width"/>
                         <field name="height"/>
-                        <field name="volume"/>
                         <field name="seo_path"/>
                         <field name="meta_title"/>
                         <field name="meta_description"/>
