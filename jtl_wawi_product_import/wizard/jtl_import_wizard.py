@@ -372,6 +372,8 @@ class JtlImportWizard(models.TransientModel):
         }
         if target_field_name.startswith("x_") and not target_field_id:
             values["create_field_if_missing"] = True
+            values["new_field_name"] = target_field_name
+            values["new_field_label"] = column_label
         return values
 
     def _build_mapping_lines(self, analysis_by_file):
@@ -417,8 +419,8 @@ class JtlImportWizard(models.TransientModel):
                     "is_reserved": is_reserved,
                     "default_value": getattr(mapping, "default_value", False) if mapping else False,
                     "create_field_if_missing": False if is_reserved else (getattr(mapping, "create_field", False) if mapping else guessed.get("create_field_if_missing", False)),
-                    "new_field_name": False if is_reserved else (getattr(mapping, "new_field_name", False) if mapping else False),
-                    "new_field_label": False if is_reserved else (getattr(mapping, "new_field_label", False) if mapping else item["source_column_label"]),
+                    "new_field_name": False if is_reserved else (getattr(mapping, "new_field_name", False) if mapping else guessed.get("new_field_name", False)),
+                    "new_field_label": False if is_reserved else (getattr(mapping, "new_field_label", False) if mapping else (guessed.get("new_field_label") or item["source_column_label"])),
                     "relation_model": False if is_reserved else (getattr(mapping, "relation_model", False) if mapping else False),
                 }
                 line_commands.append((0, 0, values))
