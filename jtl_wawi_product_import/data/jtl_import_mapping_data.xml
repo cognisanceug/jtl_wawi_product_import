@@ -77,7 +77,7 @@
             <field name="target_field">barcode</field>
         </record>
         <record id="jtl_mapping_manufacturer_sku" model="jtl.import.mapping">
-            <field name="name">Manufacturer SKU</field>
+            <field name="name">HAN (Manufacturer SKU)</field>
             <field name="sequence">60</field>
             <field name="source_file_key">article_master</field>
             <field name="source_column">HAN</field>
@@ -668,12 +668,12 @@
             <field name="transform_logic">decimal</field>
         </record>
         <record id="jtl_mapping_article_master_supplier_delay_alt" model="jtl.import.mapping">
-            <field name="name">Lieferzeit Lieferant</field>
+            <field name="name">Kundenvorlaufzeit (JTL: Lieferzeit in Tagen)</field>
             <field name="sequence">630</field>
             <field name="source_file_key">article_master</field>
             <field name="source_column">Lieferzeit in Tagen (Lieferant)</field>
-            <field name="target_model">product.supplierinfo</field>
-            <field name="target_field">lead_time</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">sale_delay</field>
             <field name="transform_logic">integer</field>
         </record>
         <record id="jtl_mapping_variation_definition_name" model="jtl.import.mapping">

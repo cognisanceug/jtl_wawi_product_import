@@ -50,7 +50,7 @@ class ProductTemplate(models.Model):
         string="Marke",
         domain="[('manufacturer_id', '=', manufacturer_id)]",
     )
-    manufacturer_sku = fields.Char(string="Manufacturer SKU", copy=False)
+    manufacturer_sku = fields.Char(string="HAN", copy=False, help="Hersteller-Artikelnummer (Manufacturer Article Number).")
     parent_sku = fields.Char(string="Parent SKU", copy=False, index=True)
     seo_path = fields.Char(string="SEO Path", copy=False)
     meta_title = fields.Char(string="Meta Title", translate=True, copy=False)

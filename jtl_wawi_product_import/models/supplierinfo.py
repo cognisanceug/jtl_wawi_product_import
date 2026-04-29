@@ -6,7 +6,7 @@ class ProductSupplierinfo(models.Model):
 
     is_default_supplier = fields.Boolean(string="Default Supplier", copy=False)
     manufacturer_sku = fields.Char(
-        string="Manufacturer SKU",
+        string="HAN",
         copy=False,
-        help="Article number used by the manufacturer for this product / supplier combination.",
+        help="Hersteller-Artikelnummer (Manufacturer Article Number) used by the manufacturer for this product / supplier combination.",
     )
