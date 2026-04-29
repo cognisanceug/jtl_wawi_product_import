@@ -632,12 +632,12 @@
             <field name="transform_logic">html</field>
         </record>
         <record id="jtl_mapping_article_master_gross_price_alt" model="jtl.import.mapping">
-            <field name="name">Brutto-VK</field>
+            <field name="name">Verkaufspreis (JTL: Brutto-VK)</field>
             <field name="sequence">590</field>
             <field name="source_file_key">article_master</field>
             <field name="source_column">Brutto-VK</field>
             <field name="target_model">product.template</field>
-            <field name="target_field">gross_sales_price</field>
+            <field name="target_field">list_price</field>
             <field name="transform_logic">decimal</field>
         </record>
         <record id="jtl_mapping_article_master_tax_rate_alt" model="jtl.import.mapping">
