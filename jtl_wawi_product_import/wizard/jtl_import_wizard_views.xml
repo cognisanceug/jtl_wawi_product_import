@@ -70,22 +70,23 @@
                     <page string="Artikelstammdaten">
                         <field name="article_master_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
+                                <field name="is_reserved" column_invisible="1"/>
                                 <field name="sequence" optional="hide"/>
-                                <field name="active"/>
-                                <field name="import_enabled" string="Importieren"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" string="Importieren" readonly="is_reserved"/>
                                 <field name="source_column_label" string="CSV-Spalte"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype" string="Erkannt"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}" readonly="is_reserved"/>
                                 <field name="target_field_ttype" string="Feldtyp" readonly="1"/>
                                 <field name="field_required" string="Pflichtfeld" readonly="1"/>
-                                <field name="create_field_if_missing" string="Neues Feld"/>
-                                <field name="new_field_name"/>
-                                <field name="new_field_label"/>
-                                <field name="custom_field_ttype" string="Neuer Feldtyp"/>
-                                <field name="relation_model" invisible="custom_field_ttype != 'many2one'"/>
-                                <field name="transform_logic"/>
+                                <field name="create_field_if_missing" string="Neues Feld" readonly="is_reserved"/>
+                                <field name="new_field_name" readonly="is_reserved"/>
+                                <field name="new_field_label" readonly="is_reserved"/>
+                                <field name="custom_field_ttype" string="Neuer Feldtyp" readonly="is_reserved"/>
+                                <field name="relation_model" invisible="custom_field_ttype != 'many2one'" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="relation_hint" string="Hinweis" readonly="1"/>
                                 <field name="status" readonly="1"/>
                                 <field name="note" readonly="1"/>
@@ -95,17 +96,18 @@
                     <page string="Hersteller">
                         <field name="manufacturer_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label" string="CSV-Spalte"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing"/>
-                                <field name="new_field_name"/>
-                                <field name="custom_field_ttype"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="create_field_if_missing" readonly="is_reserved"/>
+                                <field name="new_field_name" readonly="is_reserved"/>
+                                <field name="custom_field_ttype" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -113,14 +115,15 @@
                     <page string="EU-RP">
                         <field name="eu_representative_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label" string="CSV-Spalte"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -128,17 +131,18 @@
                     <page string="Kategorien">
                         <field name="category_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing"/>
-                                <field name="new_field_name"/>
-                                <field name="custom_field_ttype"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="create_field_if_missing" readonly="is_reserved"/>
+                                <field name="new_field_name" readonly="is_reserved"/>
+                                <field name="custom_field_ttype" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -146,18 +150,19 @@
                     <page string="Lieferantenartikel">
                         <field name="supplierinfo_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing"/>
-                                <field name="new_field_name"/>
-                                <field name="custom_field_ttype"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="create_field_if_missing" readonly="is_reserved"/>
+                                <field name="new_field_name" readonly="is_reserved"/>
+                                <field name="custom_field_ttype" readonly="is_reserved"/>
                                 <field name="relation_hint" readonly="1"/>
-                                <field name="transform_logic"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -165,14 +170,15 @@
                     <page string="Variationskombinationen">
                         <field name="variation_combination_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="relation_hint" readonly="1"/>
                                 <field name="note" readonly="1"/>
                             </list>
@@ -181,14 +187,15 @@
                     <page string="Variationen">
                         <field name="variation_definition_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -196,17 +203,18 @@
                     <page string="Attribute">
                         <field name="attribute_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing"/>
-                                <field name="new_field_name"/>
-                                <field name="custom_field_ttype"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="create_field_if_missing" readonly="is_reserved"/>
+                                <field name="new_field_name" readonly="is_reserved"/>
+                                <field name="custom_field_ttype" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -214,17 +222,18 @@
                     <page string="Eigene Merkmale">
                         <field name="feature_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="create_field_if_missing"/>
-                                <field name="new_field_name"/>
-                                <field name="custom_field_ttype"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="create_field_if_missing" readonly="is_reserved"/>
+                                <field name="new_field_name" readonly="is_reserved"/>
+                                <field name="custom_field_ttype" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="note" readonly="1"/>
                             </list>
                         </field>
@@ -232,14 +241,15 @@
                     <page string="Stueckliste">
                         <field name="bom_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
-                                <field name="active"/>
-                                <field name="import_enabled"/>
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" readonly="is_reserved"/>
                                 <field name="source_column_label"/>
                                 <field name="sample_value"/>
                                 <field name="detected_ttype"/>
-                                <field name="target_model"/>
-                                <field name="target_field_id" options="{'no_create': True}"/>
-                                <field name="transform_logic"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
                                 <field name="relation_hint" readonly="1"/>
                                 <field name="note" readonly="1"/>
                             </list>

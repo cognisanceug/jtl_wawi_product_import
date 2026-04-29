@@ -111,6 +111,14 @@ REQUIRED_COLUMN_ALIASES = {
     "bom": [("artikelnummerstuecklistenkomponente", _("Artikelnummer Stuecklistenkomponente"))],
 }
 
+# Columns that are read directly by the parser for internal linking and
+# therefore must never be mapped to an Odoo field by the user. They are
+# rendered as locked rows in the wizard so the user can see what the
+# column is being used for.
+RESERVED_COLUMN_KEYS = {
+    "identifizierungsspaltevaterartikel": _("Reserved — used internally to link variant products to their parent article"),
+}
+
 
 def normalize_header_key(header):
     key = (header or "").strip().lower()
@@ -373,6 +381,8 @@ class JtlImportWizard(models.TransientModel):
                     if mapping.target_model != "website":
                         target_field = self.env["ir.model.fields"].search([("model", "=", mapping.target_model), ("name", "=", mapping.target_field)], limit=1)
                         target_field_id = target_field.id if target_field else False
+                normalized_key = normalize_header_key(item["source_column_label"] or item["source_column"])
+                is_reserved = normalized_key in RESERVED_COLUMN_KEYS
                 values = {
                     "sequence": sequence * 10,
                     "source_file_key": file_key,
@@ -380,19 +390,20 @@ class JtlImportWizard(models.TransientModel):
                     "source_column_label": item["source_column_label"],
                     "sample_value": item["sample_value"],
                     "detected_ttype": self._guess_field_type(item["source_column_label"], item.get("values"), item["sample_value"]),
-                    "target_model": mapping.target_model if mapping else guessed.get("target_model"),
-                    "target_field_id": target_field_id or guessed.get("target_field_id"),
-                    "target_field_name": target_field_name or guessed.get("target_field_name"),
+                    "target_model": False if is_reserved else (mapping.target_model if mapping else guessed.get("target_model")),
+                    "target_field_id": False if is_reserved else (target_field_id or guessed.get("target_field_id")),
+                    "target_field_name": False if is_reserved else (target_field_name or guessed.get("target_field_name")),
                     "custom_field_ttype": getattr(mapping, "new_field_type", False) or guessed.get("custom_field_ttype", "char"),
                     "transform_logic": mapping.transform_logic if mapping else guessed.get("transform_logic", "trim"),
-                    "required": bool(getattr(mapping, "required", False)) or normalize_header_key(item["source_column_label"]) in required_aliases,
+                    "required": bool(getattr(mapping, "required", False)) or normalized_key in required_aliases,
                     "active": True,
-                    "import_enabled": getattr(mapping, "import_enabled", True) if mapping else bool(guessed.get("target_model") or guessed.get("active") or guessed.get("import_enabled")),
+                    "import_enabled": False if is_reserved else (getattr(mapping, "import_enabled", True) if mapping else bool(guessed.get("target_model") or guessed.get("active") or guessed.get("import_enabled"))),
+                    "is_reserved": is_reserved,
                     "default_value": getattr(mapping, "default_value", False) if mapping else False,
-                    "create_field_if_missing": getattr(mapping, "create_field", False) if mapping else guessed.get("create_field_if_missing", False),
-                    "new_field_name": getattr(mapping, "new_field_name", False) if mapping else False,
-                    "new_field_label": getattr(mapping, "new_field_label", False) if mapping else item["source_column_label"],
-                    "relation_model": getattr(mapping, "relation_model", False) if mapping else False,
+                    "create_field_if_missing": False if is_reserved else (getattr(mapping, "create_field", False) if mapping else guessed.get("create_field_if_missing", False)),
+                    "new_field_name": False if is_reserved else (getattr(mapping, "new_field_name", False) if mapping else False),
+                    "new_field_label": False if is_reserved else (getattr(mapping, "new_field_label", False) if mapping else item["source_column_label"]),
+                    "relation_model": False if is_reserved else (getattr(mapping, "relation_model", False) if mapping else False),
                 }
                 line_commands.append((0, 0, values))
                 sequence += 1
@@ -627,6 +638,11 @@ class JtlImportWizardLine(models.TransientModel):
     required = fields.Boolean(default=False)
     active = fields.Boolean(default=False)
     import_enabled = fields.Boolean(default=True)
+    is_reserved = fields.Boolean(
+        default=False,
+        readonly=True,
+        help="If set, this column is reserved for internal use (e.g. parent article linking) and cannot be mapped to an Odoo field.",
+    )
     default_value = fields.Char()
     field_required = fields.Boolean(compute="_compute_field_metadata")
     target_field_ttype = fields.Char(compute="_compute_field_metadata")
@@ -718,10 +734,17 @@ class JtlImportWizardLine(models.TransientModel):
             line.field_required = bool(line.target_field_id and line.target_field_id.required)
             line.target_field_ttype = line.target_field_id.ttype if line.target_field_id else False
 
-    @api.depends("active", "import_enabled", "target_model", "target_field_id", "target_field_name", "create_field_if_missing", "new_field_name")
+    @api.depends("active", "import_enabled", "is_reserved", "source_column_label", "target_model", "target_field_id", "target_field_name", "create_field_if_missing", "new_field_name")
     def _compute_status(self):
         for line in self:
-            if not line.active or not line.import_enabled:
+            if line.is_reserved:
+                line.status = "ignored"
+                normalized_key = normalize_header_key(line.source_column_label or line.source_column)
+                line.note = RESERVED_COLUMN_KEYS.get(
+                    normalized_key,
+                    _("Reserved — used internally, not imported"),
+                )
+            elif not line.active or not line.import_enabled:
                 line.status = "ignored"
                 line.note = _("Ignored")
             elif line.create_field_if_missing and not line.new_field_name:
