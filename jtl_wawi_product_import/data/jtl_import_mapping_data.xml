@@ -172,12 +172,13 @@
             <field name="target_field">category_path</field>
         </record>
         <record id="jtl_mapping_manufacturer_name" model="jtl.import.mapping">
-            <field name="name">Manufacturer Name</field>
+            <field name="name">Marke (JTL: Hersteller)</field>
             <field name="sequence">160</field>
             <field name="source_file_key">article_master</field>
             <field name="source_column">Hersteller</field>
-            <field name="target_model">res.partner</field>
-            <field name="target_field">manufacturer_name</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">brand_name</field>
+            <field name="transform_logic">trim</field>
         </record>
         <record id="jtl_mapping_manufacturer_email" model="jtl.import.mapping">
             <field name="name">Manufacturer Email</field>
