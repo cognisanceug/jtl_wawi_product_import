@@ -5,3 +5,8 @@ class ProductSupplierinfo(models.Model):
     _inherit = "product.supplierinfo"
 
     is_default_supplier = fields.Boolean(string="Default Supplier", copy=False)
+    manufacturer_sku = fields.Char(
+        string="Manufacturer SKU",
+        copy=False,
+        help="Article number used by the manufacturer for this product / supplier combination.",
+    )
