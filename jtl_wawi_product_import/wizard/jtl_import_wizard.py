@@ -47,8 +47,8 @@ FILE_MODEL_WHITELIST = {
     "supplierinfo": ["res.partner", "product.supplierinfo", "product.template", "product.product"],
     "variation_combination": ["product.product", "product.template", "product.attribute", "product.attribute.value"],
     "variation_definition": ["product.attribute", "product.attribute.value", "product.template"],
-    "attribute": ["product.attribute", "product.attribute.value", "jtl.product.attribute.raw"],
-    "feature": ["product.template", "jtl.product.feature"],
+    "attribute": ["product.attribute", "product.attribute.value", "jtl.product.attribute.raw", "product.product", "product.template"],
+    "feature": ["product.template", "jtl.product.feature", "product.product"],
     "bom": ["mrp.bom", "mrp.bom.line", "product.template", "product.product"],
 }
 
