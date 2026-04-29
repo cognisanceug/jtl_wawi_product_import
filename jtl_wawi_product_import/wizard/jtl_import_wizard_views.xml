@@ -37,6 +37,7 @@
                         <field name="contacts_installed" readonly="1" invisible="1"/>
                         <field name="website_sale_installed" readonly="1" invisible="1"/>
                         <field name="product_variants_enabled" readonly="1" invisible="1"/>
+                        <field name="compare_list_price_enabled" readonly="1" invisible="1"/>
                     </group>
                     <group>
                         <field name="import_stock"/>

@@ -237,6 +237,7 @@ class JtlImportWizard(models.TransientModel):
     contacts_installed = fields.Boolean(compute="_compute_optional_module_status")
     website_sale_installed = fields.Boolean(compute="_compute_optional_module_status")
     product_variants_enabled = fields.Boolean(compute="_compute_optional_module_status")
+    compare_list_price_enabled = fields.Boolean(compute="_compute_optional_module_status")
     precheck_message = fields.Html(compute="_compute_precheck_message", sanitize=False)
     profile_id = fields.Many2one("jtl.import.profile", string="Mapping Profile", domain="[('active', '=', True)]")
     save_profile = fields.Boolean(string="Save as Profile")
@@ -264,18 +265,27 @@ class JtlImportWizard(models.TransientModel):
             record["name"]: record["state"]
             for record in module_model.search_read([("name", "in", ["contacts", "website_sale"])], ["name", "state"])
         }
+        compare_list_price_available = "compare_list_price" in self.env["product.template"]._fields
         for wizard in self:
             wizard.contacts_installed = module_states.get("contacts") == "installed"
             wizard.website_sale_installed = module_states.get("website_sale") == "installed"
             wizard.product_variants_enabled = self.env.user.has_group("product.group_product_variant")
+            wizard.compare_list_price_enabled = compare_list_price_available
 
-    @api.depends("contacts_installed", "website_sale_installed", "product_variants_enabled", "import_seo", "variation_combination_file_data", "variation_definition_file_data")
+    @api.depends("contacts_installed", "website_sale_installed", "product_variants_enabled", "compare_list_price_enabled", "import_seo", "variation_combination_file_data", "variation_definition_file_data")
     def _compute_precheck_message(self):
         for wizard in self:
             messages = []
             messages.append(_("`contacts` installed: %s") % (_("Yes") if wizard.contacts_installed else _("No")))
             messages.append(_("`website_sale` installed: %s") % (_("Yes") if wizard.website_sale_installed else _("No")))
             messages.append(_("Product variants enabled: %s") % (_("Yes") if wizard.product_variants_enabled else _("No")))
+            if wizard.compare_list_price_enabled:
+                messages.append(_("UVP / Compare Price (compare_list_price) available: Yes"))
+            else:
+                messages.append(_(
+                    "UVP / Compare Price (compare_list_price) available: No "
+                    "— enable it under Settings → Website → 'Show suggested retail price'"
+                ))
             wizard.precheck_message = "<div class='alert alert-info' role='alert'><strong>%s</strong><br/>- %s</div>" % (
                 _("Module Precheck"),
                 "<br/>- ".join(messages),
