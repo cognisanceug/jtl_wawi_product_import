@@ -129,12 +129,12 @@
             <field name="target_field">country_of_origin</field>
         </record>
         <record id="jtl_mapping_taric_code" model="jtl.import.mapping">
-            <field name="name">HS Code / TARIC</field>
+            <field name="name">HS-Code (JTL: TARIC-Code)</field>
             <field name="sequence">110</field>
             <field name="source_file_key">article_master</field>
             <field name="source_column">TARIC-Code</field>
             <field name="target_model">product.template</field>
-            <field name="target_field">taric_code</field>
+            <field name="target_field">hs_code</field>
         </record>
         <record id="jtl_mapping_gross_sales_price" model="jtl.import.mapping">
             <field name="name">Gross Sales Price</field>
