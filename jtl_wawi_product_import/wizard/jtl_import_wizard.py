@@ -117,6 +117,7 @@ REQUIRED_COLUMN_ALIASES = {
 # column is being used for.
 RESERVED_COLUMN_KEYS = {
     "identifizierungsspaltevaterartikel": _("Reserved — used internally to link variant products to their parent article"),
+    "istvaterartikel": _("Reserved — JTL parent flag, derived automatically from variant linkage"),
 }
 
 
@@ -164,12 +165,12 @@ AUTO_MAPPING_ALIASES = {
 }
 
 CURATED_MODEL_FIELDS = {
-    "product.template": ["name", "barcode", "weight", "list_price", "standard_price", "categ_id", "description_sale", "description", "website_description", "manufacturer_id", "manufacturer_partner_id", "manufacturer_sku", "seo_path", "hs_code", "country_of_origin", "brand_id"],
+    "product.template": ["name", "barcode", "weight", "list_price", "standard_price", "categ_id", "description_sale", "description", "website_description", "manufacturer_id", "manufacturer_partner_id", "manufacturer_sku", "seo_path", "hs_code", "country_of_origin", "brand_id", "sale_delay", "image_1920", "default_code"],
     "product.product": ["default_code", "barcode", "weight", "parent_sku", "active"],
     "product.category": ["name", "parent_id"],
     "product.public.category": ["name", "parent_id"],
-    "res.partner": ["name", "email", "website", "phone", "mobile", "street", "street2", "zip", "city", "country_id", "is_company", "is_manufacturer", "manufacturer_external_id", "is_eu_responsible", "eu_responsible_external_id"],
-    "product.supplierinfo": ["partner_id", "product_tmpl_id", "product_id", "product_code", "price", "delay", "min_qty"],
+    "res.partner": ["name", "email", "website", "phone", "mobile", "street", "street2", "zip", "city", "country_id", "is_company", "is_manufacturer", "manufacturer_external_id", "is_eu_responsible", "eu_responsible_external_id", "comment", "ref", "image_1920"],
+    "product.supplierinfo": ["partner_id", "product_tmpl_id", "product_id", "product_code", "price", "delay", "min_qty", "manufacturer_sku", "is_default_supplier"],
     "product.attribute": ["name", "create_variant"],
     "product.attribute.value": ["name", "attribute_id"],
     "mrp.bom": ["product_tmpl_id", "product_id", "code", "type"],
