@@ -155,12 +155,12 @@
             <field name="transform_logic">decimal</field>
         </record>
         <record id="jtl_mapping_tax_rate" model="jtl.import.mapping">
-            <field name="name">Tax Rate</field>
+            <field name="name">Steuersatz (account.tax.amount)</field>
             <field name="sequence">140</field>
             <field name="source_file_key">article_master</field>
             <field name="source_column">Steuersatz</field>
             <field name="target_model">account.tax</field>
-            <field name="target_field">tax_rate</field>
+            <field name="target_field">amount</field>
             <field name="transform_logic">decimal</field>
         </record>
         <record id="jtl_mapping_category_path" model="jtl.import.mapping">
@@ -642,13 +642,22 @@
             <field name="transform_logic">decimal</field>
         </record>
         <record id="jtl_mapping_article_master_tax_rate_alt" model="jtl.import.mapping">
-            <field name="name">Steuersatz in %</field>
+            <field name="name">Steuersatz in % (account.tax.amount)</field>
             <field name="sequence">600</field>
             <field name="source_file_key">article_master</field>
             <field name="source_column">Steuersatz in %</field>
             <field name="target_model">account.tax</field>
-            <field name="target_field">tax_rate</field>
+            <field name="target_field">amount</field>
             <field name="transform_logic">decimal</field>
+        </record>
+        <record id="jtl_mapping_article_master_stock_management" model="jtl.import.mapping">
+            <field name="name">Bestandsführung aktiv (Storable Product)</field>
+            <field name="sequence">605</field>
+            <field name="source_file_key">article_master</field>
+            <field name="source_column">Bestandsführung aktiv</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">is_storable</field>
+            <field name="transform_logic">boolean_normalize</field>
         </record>
         <record id="jtl_mapping_article_master_active_alt" model="jtl.import.mapping">
             <field name="name">Artikel aktiv</field>

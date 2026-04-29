@@ -22,6 +22,8 @@ _FIXES = [
     ("jtl_wawi_product_import.jtl_mapping_article_master_gross_price_alt", "product.template", "list_price"),
     ("jtl_wawi_product_import.jtl_mapping_article_master_supplier_delay_alt", "product.template", "sale_delay"),
     ("jtl_wawi_product_import.jtl_mapping_manufacturer_name", "product.template", "brand_name"),
+    ("jtl_wawi_product_import.jtl_mapping_tax_rate", "account.tax", "amount"),
+    ("jtl_wawi_product_import.jtl_mapping_article_master_tax_rate_alt", "account.tax", "amount"),
 ]
 
 
