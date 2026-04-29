@@ -158,7 +158,7 @@ AUTO_MAPPING_ALIASES = {
         "artikelgewicht": ("product.template", "weight", "float"),
         "tariccode": ("product.template", "hs_code", "char"),
         "han": ("product.template", "x_jtl_han", "char"),
-        "uvp": ("product.template", "x_jtl_uvp", "float"),
+        "uvp": ("product.template", "compare_list_price", "float"),
         "hersteller": ("product.template", "x_jtl_manufacturer_id", "many2one"),
         "herkunftsland": ("product.template", "country_of_origin", "char"),
         "urlpfad": ("product.template", "seo_path", "char"),
@@ -180,7 +180,7 @@ AUTO_MAPPING_ALIASES = {
 }
 
 CURATED_MODEL_FIELDS = {
-    "product.template": ["name", "barcode", "weight", "list_price", "standard_price", "categ_id", "description_sale", "description", "website_description", "manufacturer_id", "manufacturer_partner_id", "manufacturer_sku", "seo_path", "hs_code", "country_of_origin", "brand_id", "sale_delay", "image_1920", "default_code", "is_storable", "type", "active", "sale_ok", "purchase_ok"],
+    "product.template": ["name", "barcode", "weight", "list_price", "standard_price", "categ_id", "description_sale", "description", "website_description", "manufacturer_id", "manufacturer_partner_id", "manufacturer_sku", "seo_path", "hs_code", "country_of_origin", "brand_id", "sale_delay", "image_1920", "default_code", "is_storable", "type", "active", "sale_ok", "purchase_ok", "compare_list_price"],
     "product.product": ["default_code", "barcode", "weight", "parent_sku", "active"],
     "product.category": ["name", "parent_id"],
     "product.public.category": ["name", "parent_id"],
