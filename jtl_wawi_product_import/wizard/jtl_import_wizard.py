@@ -233,7 +233,7 @@ class JtlImportWizard(models.TransientModel):
     import_images = fields.Boolean(default=True)
     import_gallery_images = fields.Boolean(default=False)
     import_seo = fields.Boolean(default=False)
-    barcode_match_update = fields.Boolean(default=False, string="Barcode Match Update")
+    barcode_match_update = fields.Boolean(default=True, string="Barcode Match Update", help="When ticked the importer also matches existing products by barcode if no SKU match was found, before creating a new record.")
     category_root_id = fields.Many2one(
         "product.category",
         string="Root Category",
@@ -291,9 +291,25 @@ class JtlImportWizard(models.TransientModel):
                     "UVP / Compare Price (compare_list_price) available: No "
                     "— enable it under Settings → Website → 'Show suggested retail price'"
                 ))
-            wizard.precheck_message = "<div class='alert alert-info' role='alert'><strong>%s</strong><br/>- %s</div>" % (
+            duplicate_detection = _(
+                "Duplicate detection: existing records are <strong>updated, not duplicated</strong>. "
+                "Lookup keys per model:"
+                "<ul style='margin:4px 0 0 16px;'>"
+                "<li><code>product.template / product.product</code>: SKU (default_code), then barcode%s</li>"
+                "<li><code>res.partner</code> manufacturer / EU representative: name (case-insensitive), then external_id</li>"
+                "<li><code>product.brand</code>: name (case-insensitive), then external_id</li>"
+                "<li><code>product.category</code>: name + parent_id, hierarchy walked level by level</li>"
+                "<li><code>product.supplierinfo</code>: partner + product + supplier_product_number</li>"
+                "</ul>"
+            ) % (_(" (active)") if wizard.barcode_match_update else _(" (disabled — enable Barcode Match Update)"))
+            wizard.precheck_message = (
+                "<div class='alert alert-info' role='alert'><strong>%s</strong><br/>- %s</div>"
+                "<div class='alert alert-success' role='alert' style='margin-top:8px;'><strong>%s</strong><br/>%s</div>"
+            ) % (
                 _("Module Precheck"),
                 "<br/>- ".join(messages),
+                _("Update vs. Create"),
+                duplicate_detection,
             )
 
     def _run_module_precheck(self):

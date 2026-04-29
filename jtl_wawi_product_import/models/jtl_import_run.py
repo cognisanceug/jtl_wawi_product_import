@@ -43,7 +43,7 @@ class JtlImportRun(models.Model):
     import_images = fields.Boolean(default=True)
     import_gallery_images = fields.Boolean(default=False)
     import_seo = fields.Boolean(default=False)
-    barcode_match_update = fields.Boolean(default=False, string="Barcode Match Update")
+    barcode_match_update = fields.Boolean(default=True, string="Barcode Match Update")
     dry_run = fields.Boolean(default=False)
     update_existing_only = fields.Boolean(default=False)
     category_root_id = fields.Many2one(
