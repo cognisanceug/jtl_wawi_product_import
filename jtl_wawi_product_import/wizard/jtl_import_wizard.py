@@ -76,11 +76,18 @@ TRANSFORM_SELECTION = [
     ("trim", "Trim"),
     ("uppercase", "Grossschreibung"),
     ("lowercase", "Kleinschreibung"),
+    ("decimal", "Dezimal"),
     ("decimal_comma", "Dezimal-Komma zu Punkt"),
+    ("html", "HTML"),
     ("html_clean", "HTML bereinigen"),
+    ("boolean", "Boolean"),
     ("boolean_normalize", "Boolean normalisieren"),
+    ("integer", "Integer"),
     ("slug", "Slug erzeugen"),
     ("path", "Kategoriepfad erzeugen"),
+    ("char", "Zeichenkette"),
+    ("selection", "Selection"),
+    ("many2one", "Many2one"),
     ("ignore_empty", "Leere Werte ignorieren"),
     ("text", "Keine"),
 ]
@@ -198,6 +205,11 @@ class JtlImportWizard(models.TransientModel):
     import_gallery_images = fields.Boolean(default=False)
     import_seo = fields.Boolean(default=False)
     barcode_match_update = fields.Boolean(default=False, string="Barcode Match Update")
+    category_root_id = fields.Many2one(
+        "product.category",
+        string="Root Category",
+        help="Optional: alle aus den JTL-Kategorien-Ebenen erzeugten Top-Level-Kategorien werden als Kinder dieser Odoo-Kategorie angelegt. Leer lassen, um direkt unter der Wurzel anzulegen.",
+    )
     contacts_installed = fields.Boolean(compute="_compute_optional_module_status")
     website_sale_installed = fields.Boolean(compute="_compute_optional_module_status")
     product_variants_enabled = fields.Boolean(compute="_compute_optional_module_status")
@@ -374,8 +386,8 @@ class JtlImportWizard(models.TransientModel):
                     "custom_field_ttype": getattr(mapping, "new_field_type", False) or guessed.get("custom_field_ttype", "char"),
                     "transform_logic": mapping.transform_logic if mapping else guessed.get("transform_logic", "trim"),
                     "required": bool(getattr(mapping, "required", False)) or normalize_header_key(item["source_column_label"]) in required_aliases,
-                    "active": bool(mapping) or bool(guessed.get("active")),
-                    "import_enabled": getattr(mapping, "import_enabled", True) if mapping else guessed.get("import_enabled", True),
+                    "active": True,
+                    "import_enabled": getattr(mapping, "import_enabled", True) if mapping else bool(guessed.get("target_model") or guessed.get("active") or guessed.get("import_enabled")),
                     "default_value": getattr(mapping, "default_value", False) if mapping else False,
                     "create_field_if_missing": getattr(mapping, "create_field", False) if mapping else guessed.get("create_field_if_missing", False),
                     "new_field_name": getattr(mapping, "new_field_name", False) if mapping else False,
@@ -561,6 +573,7 @@ class JtlImportWizard(models.TransientModel):
                 "import_gallery_images": self.import_gallery_images,
                 "import_seo": self.import_seo,
                 "barcode_match_update": self.barcode_match_update,
+                "category_root_id": self.category_root_id.id if self.category_root_id else False,
             }
         )
         run.set_source_bundle(file_specs)

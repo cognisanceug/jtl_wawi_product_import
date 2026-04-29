@@ -90,7 +90,10 @@ class JtlImportProcessor(models.AbstractModel):
         )
 
     def process_run_batch(self, run):
-        self = self.with_context(update_existing_only=bool(run.update_existing_only))
+        self = self.with_context(
+            update_existing_only=bool(run.update_existing_only),
+            category_root_id=run.category_root_id.id if run.category_root_id else False,
+        )
         payload = run.get_payload()
         skus = payload.get("skus", [])
         products = payload.get("products", {})
@@ -785,12 +788,19 @@ class JtlImportProcessor(models.AbstractModel):
         if not category_path:
             return False
         path = str(category_path).replace(">", "/")
-        cache_key = " / ".join([item.strip() for item in path.split("/") if item.strip()]).lower()
+        parts = [item.strip() for item in path.split("/") if item.strip()]
+        if not parts:
+            return False
+        cache_key = " / ".join(parts).lower()
         if caches["category"].get(cache_key):
             return caches["category"][cache_key]
-        parent = False
+        root_id = self.env.context.get("category_root_id") or False
+        root = self.env["product.category"].browse(root_id) if root_id else False
+        parent = root if root and root.exists() else False
         full_path_parts = []
-        for part in [item.strip() for item in path.split("/") if item.strip()]:
+        if parent:
+            full_path_parts = [parent.name]
+        for part in parts:
             full_path_parts.append(part)
             part_key = " / ".join(full_path_parts).lower()
             category = caches["category"].get(part_key)
@@ -799,11 +809,11 @@ class JtlImportProcessor(models.AbstractModel):
                 category = self.env["product.category"].search(domain, limit=1)
                 if not category:
                     if self.env.context.get("update_existing_only"):
-                        return parent
+                        return parent if parent and parent != root else False
                     category = self.env["product.category"].create({"name": part, "parent_id": parent.id if parent else False})
                 caches["category"][part_key] = category
             parent = category
-        return parent
+        return parent if parent and parent != root else parent
 
     def _build_public_category_path(self, category):
         names = []

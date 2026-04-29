@@ -31,6 +31,7 @@
                         <field name="dry_run"/>
                         <field name="update_existing_only"/>
                         <field name="barcode_match_update"/>
+                        <field name="category_root_id" options="{'no_create': True}"/>
                         <field name="headers_loaded" readonly="1"/>
                         <field name="mapping_validated" readonly="1"/>
                         <field name="contacts_installed" readonly="1" invisible="1"/>
@@ -67,7 +68,7 @@
 
                 <notebook invisible="wizard_step == 'files'">
                     <page string="Artikelstammdaten">
-                        <field name="article_master_mapping_line_ids" nolabel="1">
+                        <field name="article_master_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="sequence" optional="hide"/>
                                 <field name="active"/>
@@ -92,7 +93,7 @@
                         </field>
                     </page>
                     <page string="Hersteller">
-                        <field name="manufacturer_mapping_line_ids" nolabel="1">
+                        <field name="manufacturer_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -110,7 +111,7 @@
                         </field>
                     </page>
                     <page string="EU-RP">
-                        <field name="eu_representative_mapping_line_ids" nolabel="1">
+                        <field name="eu_representative_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -125,7 +126,7 @@
                         </field>
                     </page>
                     <page string="Kategorien">
-                        <field name="category_mapping_line_ids" nolabel="1">
+                        <field name="category_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -143,7 +144,7 @@
                         </field>
                     </page>
                     <page string="Lieferantenartikel">
-                        <field name="supplierinfo_mapping_line_ids" nolabel="1">
+                        <field name="supplierinfo_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -162,7 +163,7 @@
                         </field>
                     </page>
                     <page string="Variationskombinationen">
-                        <field name="variation_combination_mapping_line_ids" nolabel="1">
+                        <field name="variation_combination_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -178,7 +179,7 @@
                         </field>
                     </page>
                     <page string="Variationen">
-                        <field name="variation_definition_mapping_line_ids" nolabel="1">
+                        <field name="variation_definition_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -193,7 +194,7 @@
                         </field>
                     </page>
                     <page string="Attribute">
-                        <field name="attribute_mapping_line_ids" nolabel="1">
+                        <field name="attribute_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -211,7 +212,7 @@
                         </field>
                     </page>
                     <page string="Eigene Merkmale">
-                        <field name="feature_mapping_line_ids" nolabel="1">
+                        <field name="feature_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>
@@ -229,7 +230,7 @@
                         </field>
                     </page>
                     <page string="Stueckliste">
-                        <field name="bom_mapping_line_ids" nolabel="1">
+                        <field name="bom_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="active"/>
                                 <field name="import_enabled"/>

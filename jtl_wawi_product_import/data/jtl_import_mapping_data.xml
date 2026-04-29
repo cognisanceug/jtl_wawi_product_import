@@ -372,6 +372,56 @@
             <field name="target_model">res.partner</field>
             <field name="target_field">website</field>
         </record>
+        <record id="jtl_mapping_manufacturer_master_description_de" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master Description DE</field>
+            <field name="sequence">411</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">Beschreibung</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">comment</field>
+            <field name="language_code">de_DE</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_description_en" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master Description EN</field>
+            <field name="sequence">412</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">Beschreibung__2</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">comment</field>
+            <field name="language_code">en_US</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_url_path" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master URL Path</field>
+            <field name="sequence">413</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">URL-Pfad</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">ref</field>
+            <field name="transform_logic">slug</field>
+            <field name="active">False</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_meta_title" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master Meta Title</field>
+            <field name="sequence">415</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">Titel-Tag</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">ref</field>
+            <field name="transform_logic">trim</field>
+            <field name="active">False</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_image" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master Image</field>
+            <field name="sequence">417</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">Bild</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">image_1920</field>
+            <field name="transform_logic">trim</field>
+            <field name="active">False</field>
+        </record>
         <record id="jtl_mapping_category_file_sku" model="jtl.import.mapping">
             <field name="name">Category File SKU</field>
             <field name="sequence">420</field>
@@ -379,6 +429,72 @@
             <field name="source_column">Artikelnummer</field>
             <field name="target_model">product.product</field>
             <field name="target_field">default_code</field>
+            <field name="required">1</field>
+        </record>
+        <record id="jtl_mapping_category_file_name" model="jtl.import.mapping">
+            <field name="name">Category File Article Name</field>
+            <field name="sequence">421</field>
+            <field name="source_file_key">category</field>
+            <field name="source_column">Artikelname</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">name</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_category_file_level_1" model="jtl.import.mapping">
+            <field name="name">Category File Level 1</field>
+            <field name="sequence">422</field>
+            <field name="source_file_key">category</field>
+            <field name="source_column">Kategorie Ebene 1</field>
+            <field name="target_model">product.category</field>
+            <field name="target_field">level_1</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_category_file_level_2" model="jtl.import.mapping">
+            <field name="name">Category File Level 2</field>
+            <field name="sequence">423</field>
+            <field name="source_file_key">category</field>
+            <field name="source_column">Kategorie Ebene 2</field>
+            <field name="target_model">product.category</field>
+            <field name="target_field">level_2</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_category_file_level_3" model="jtl.import.mapping">
+            <field name="name">Category File Level 3</field>
+            <field name="sequence">424</field>
+            <field name="source_file_key">category</field>
+            <field name="source_column">Kategorie Ebene 3</field>
+            <field name="target_model">product.category</field>
+            <field name="target_field">level_3</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_category_file_level_4" model="jtl.import.mapping">
+            <field name="name">Category File Level 4</field>
+            <field name="sequence">425</field>
+            <field name="source_file_key">category</field>
+            <field name="source_column">Kategorie Ebene 4</field>
+            <field name="target_model">product.category</field>
+            <field name="target_field">level_4</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_category_file_url_path_de" model="jtl.import.mapping">
+            <field name="name">Category File URL Path DE</field>
+            <field name="sequence">426</field>
+            <field name="source_file_key">category</field>
+            <field name="source_column">URL-Pfad</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">seo_path</field>
+            <field name="language_code">de_DE</field>
+            <field name="transform_logic">slug</field>
+        </record>
+        <record id="jtl_mapping_category_file_url_path_en" model="jtl.import.mapping">
+            <field name="name">Category File URL Path EN</field>
+            <field name="sequence">427</field>
+            <field name="source_file_key">category</field>
+            <field name="source_column">URL-Pfad Englisch</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">seo_path</field>
+            <field name="language_code">en_US</field>
+            <field name="transform_logic">slug</field>
         </record>
         <record id="jtl_mapping_supplier_file_sku" model="jtl.import.mapping">
             <field name="name">Supplier File SKU</field>
@@ -722,6 +838,137 @@
             <field name="source_column">ID</field>
             <field name="target_model">res.partner</field>
             <field name="target_field">eu_responsible_external_id</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_description_de" model="jtl.import.mapping">
+            <field name="name">EU RP Master Description DE</field>
+            <field name="sequence">831</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">Beschreibung</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">comment</field>
+            <field name="language_code">de_DE</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_description_en" model="jtl.import.mapping">
+            <field name="name">EU RP Master Description EN</field>
+            <field name="sequence">832</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">Beschreibung__2</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">comment</field>
+            <field name="language_code">en_US</field>
+            <field name="transform_logic">html</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_url_path" model="jtl.import.mapping">
+            <field name="name">EU RP Master URL Path</field>
+            <field name="sequence">833</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">URL-Pfad</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">ref</field>
+            <field name="transform_logic">slug</field>
+            <field name="active">False</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_meta_title" model="jtl.import.mapping">
+            <field name="name">EU RP Master Meta Title</field>
+            <field name="sequence">835</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">Titel-Tag</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">ref</field>
+            <field name="transform_logic">trim</field>
+            <field name="active">False</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_image" model="jtl.import.mapping">
+            <field name="name">EU RP Master Image</field>
+            <field name="sequence">837</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">Bild</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">image_1920</field>
+            <field name="transform_logic">trim</field>
+            <field name="active">False</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_phone" model="jtl.import.mapping">
+            <field name="name">EU RP Master Phone</field>
+            <field name="sequence">838</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">Telefon</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">phone</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_street" model="jtl.import.mapping">
+            <field name="name">EU RP Master Street</field>
+            <field name="sequence">839</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">Straße</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">street</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_zip" model="jtl.import.mapping">
+            <field name="name">EU RP Master ZIP</field>
+            <field name="sequence">840</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">PLZ</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">zip</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_eu_rp_master_city" model="jtl.import.mapping">
+            <field name="name">EU RP Master City</field>
+            <field name="sequence">841</field>
+            <field name="source_file_key">eu_representative</field>
+            <field name="source_column">Ort</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">city</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_phone" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master Phone</field>
+            <field name="sequence">418</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">Telefon</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">phone</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_email" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master Email</field>
+            <field name="sequence">419</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">E-Mail</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">email</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_street" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master Street</field>
+            <field name="sequence">420</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">Straße</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">street</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_zip" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master ZIP</field>
+            <field name="sequence">421</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">PLZ</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">zip</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <record id="jtl_mapping_manufacturer_master_city" model="jtl.import.mapping">
+            <field name="name">Manufacturer Master City</field>
+            <field name="sequence">422</field>
+            <field name="source_file_key">manufacturer</field>
+            <field name="source_column">Ort</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">city</field>
+            <field name="transform_logic">trim</field>
         </record>
     </data>
 </odoo>

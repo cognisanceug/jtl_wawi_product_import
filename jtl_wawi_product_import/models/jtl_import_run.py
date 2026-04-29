@@ -46,6 +46,11 @@ class JtlImportRun(models.Model):
     barcode_match_update = fields.Boolean(default=False, string="Barcode Match Update")
     dry_run = fields.Boolean(default=False)
     update_existing_only = fields.Boolean(default=False)
+    category_root_id = fields.Many2one(
+        "product.category",
+        string="Root Category",
+        help="Optional Odoo-Kategorie, unter der alle aus den JTL-Kategorie-Ebenen erzeugten Top-Level-Kategorien angelegt werden.",
+    )
     active_test = fields.Boolean(default=True)
     last_error = fields.Text(readonly=True)
     created_products = fields.Integer(default=0, readonly=True)
