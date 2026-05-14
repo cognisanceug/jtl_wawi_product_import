@@ -7,6 +7,7 @@ SOURCE_FILE_SELECTION = [
     ("eu_representative", "EU RP"),
     ("category", "Kategorien"),
     ("supplierinfo", "Lieferantenartikel"),
+    ("supplier_master", "Lieferantenstammdaten"),
     ("variation_combination", "Variationskombinationen"),
     ("variation_definition", "Variationen"),
     ("attribute", "Attribute"),

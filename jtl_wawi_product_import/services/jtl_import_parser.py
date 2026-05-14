@@ -25,22 +25,39 @@ class JtlImportParser(models.AbstractModel):
             result.append(key)
         return result
 
-    def _sniff_csv(self, datas):
-        raw = self._get_raw_file_bytes(datas)
+    def _decode_raw(self, raw):
+        """Decode raw CSV bytes to text.
+
+        UTF-16 is detected explicitly via its BOM — otherwise ``utf-8-sig``
+        would "succeed" on UTF-16 input and return a string interleaved with
+        NUL (0x00) characters, which PostgreSQL refuses to store
+        (``ValueError: A string literal cannot contain NUL``). NUL bytes are
+        stripped defensively regardless of the source encoding, since they
+        never carry meaning in a CSV cell.
+        """
+        if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+            for encoding in ("utf-16", "utf-16-le", "utf-16-be"):
+                try:
+                    return raw.decode(encoding).replace("\x00", "")
+                except UnicodeDecodeError:
+                    pass
         last_error = False
         for encoding in ("utf-8-sig", "cp1252", "latin1"):
             try:
-                decoded = raw.decode(encoding)
-                sample = decoded[:8192]
-                try:
-                    dialect = csv.Sniffer().sniff(sample, delimiters=";,\t|")
-                    delimiter = dialect.delimiter
-                except csv.Error:
-                    delimiter = ";"
-                return decoded, delimiter
+                return raw.decode(encoding).replace("\x00", "")
             except UnicodeDecodeError as exc:
                 last_error = exc
         raise ValueError(_("Unable to decode CSV file: %s") % last_error)
+
+    def _sniff_csv(self, datas):
+        decoded = self._decode_raw(self._get_raw_file_bytes(datas))
+        sample = decoded[:8192]
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=";,\t|")
+            delimiter = dialect.delimiter
+        except csv.Error:
+            delimiter = ";"
+        return decoded, delimiter
 
     def _html_to_text_lines(self, value):
         text = html.unescape(value or "")
@@ -108,14 +125,7 @@ class JtlImportParser(models.AbstractModel):
         return extracted
 
     def _decode_file(self, datas):
-        raw = base64.b64decode(datas or b"")
-        last_error = False
-        for encoding in ("utf-8-sig", "cp1252", "latin1"):
-            try:
-                return raw.decode(encoding)
-            except UnicodeDecodeError as exc:
-                last_error = exc
-        raise ValueError(_("Unable to decode CSV file: %s") % last_error)
+        return self._decode_raw(base64.b64decode(datas or b""))
 
     def _get_raw_file_bytes(self, datas):
         return base64.b64decode(datas or b"")
@@ -396,6 +406,34 @@ class JtlImportParser(models.AbstractModel):
                     existing["translations"][field_name].update(values)
         return list(representatives.values()), warnings
 
+    def _parse_supplier_master_rows(self, rows, mappings):
+        """Parse the JTL "Lieferantenstammdaten" file into res.partner master
+        records. Suppliers are deduplicated by name within the file; the
+        processor marks them with supplier_rank so they show up as vendors."""
+        suppliers = {}
+        warnings = []
+        for row_number, row in rows:
+            prepared = self._prepare_row_payload(row, mappings)
+            record, warning = self._build_partner_master_record(
+                row,
+                prepared,
+                row_number,
+                "supplier",
+                ("Firma", "Lieferant", "name"),
+                "ref",
+            )
+            if warning:
+                warnings.append(warning)
+                continue
+            supplier_name = record["name"]
+            existing = suppliers.setdefault(supplier_name, record)
+            if existing is not record:
+                existing["rows"].append(dict(row))
+                existing["model_data"]["res.partner"].update(record["model_data"]["res.partner"])
+                for field_name, values in record["translations"].items():
+                    existing["translations"][field_name].update(values)
+        return list(suppliers.values()), warnings
+
     def _parse_product_rows(self, file_key, rows, mappings, grouped_rows, product_sequence):
         warnings = []
         for row_number, row in rows:
@@ -555,6 +593,7 @@ class JtlImportParser(models.AbstractModel):
         product_sequence = []
         manufacturer_rows = []
         eu_responsible_rows = []
+        supplier_master_rows = []
         warnings = []
         processed_file_names = []
 
@@ -591,6 +630,10 @@ class JtlImportParser(models.AbstractModel):
                 parsed_representatives, file_warnings = self._parse_eu_responsible_rows(rows, file_mappings)
                 eu_responsible_rows.extend(parsed_representatives)
                 warnings.extend(file_warnings)
+            elif file_key == "supplier_master":
+                parsed_suppliers, file_warnings = self._parse_supplier_master_rows(rows, file_mappings)
+                supplier_master_rows.extend(parsed_suppliers)
+                warnings.extend(file_warnings)
             else:
                 warnings.extend(
                     self._parse_product_rows(file_key, rows, file_mappings, grouped_rows, product_sequence)
@@ -610,5 +653,6 @@ class JtlImportParser(models.AbstractModel):
             "products": grouped_rows,
             "manufacturers": manufacturer_rows,
             "eu_responsibles": eu_responsible_rows,
+            "suppliers_master": supplier_master_rows,
             "warnings": warnings,
         }

@@ -99,8 +99,9 @@ class JtlImportProcessor(models.AbstractModel):
         products = payload.get("products", {})
         manufacturers = payload.get("manufacturers", [])
         eu_responsibles = payload.get("eu_responsibles", [])
-        if not skus:
-            run.write({"state": "failed", "last_error": _("No staged products were found for processing.")})
+        suppliers_master = payload.get("suppliers_master", [])
+        if not skus and not (manufacturers or eu_responsibles or suppliers_master):
+            run.write({"state": "failed", "last_error": _("No staged records were found for processing.")})
             return False
 
         run.write({"state": "running"})
@@ -119,6 +120,7 @@ class JtlImportProcessor(models.AbstractModel):
 
         all_logs.extend(self._process_manufacturer_master_data(run, manufacturers, caches))
         all_logs.extend(self._process_eu_responsible_master_data(run, eu_responsibles, caches))
+        all_logs.extend(self._process_supplier_master_data(run, suppliers_master, caches))
 
         for sku in batch_skus:
             try:
@@ -232,7 +234,7 @@ class JtlImportProcessor(models.AbstractModel):
             self._process_suppliers(run, template, product_payload.get("suppliers", []), caches, logs, sku)
             self._process_images(run, template, product_payload.get("images", []), logs)
             if run.import_stock:
-                self._process_stock(template, product_payload.get("stock", []), caches, logs, sku)
+                self._process_stock(run, template, product_payload.get("stock", []), caches, logs, sku)
             return {
                 "created_products": 1 if created_template else 0,
                 "updated_products": 0 if created_template else 1,
@@ -256,8 +258,8 @@ class JtlImportProcessor(models.AbstractModel):
         self._process_suppliers(run, template, product_payload.get("suppliers", []), caches, logs, sku)
         self._process_images(run, template, product_payload.get("images", []), logs)
         if run.import_stock:
-            self._process_stock(template, product_payload.get("stock", []), caches, logs, sku)
-        self._process_bom(template, product_payload.get("bom", []), caches, logs, sku)
+            self._process_stock(run, template, product_payload.get("stock", []), caches, logs, sku)
+        self._process_bom(run, template, product_payload.get("bom", []), caches, logs, sku)
         if run.import_seo:
             self._process_seo(template, product_payload.get("seo", {}), logs)
         return {
@@ -784,6 +786,126 @@ class JtlImportProcessor(models.AbstractModel):
             )
         return logs
 
+    # JTL-Wawi exports country codes like "D" / "A" / "CH"; map the common
+    # single-letter DACH codes to ISO so res.country lookups succeed.
+    _JTL_COUNTRY_ALIASES = {
+        "d": "DE", "de": "DE", "deutschland": "DE", "germany": "DE",
+        "a": "AT", "at": "AT", "oesterreich": "AT", "österreich": "AT", "austria": "AT",
+        "ch": "CH", "schweiz": "CH", "switzerland": "CH",
+    }
+
+    def _resolve_supplier_country(self, value, caches):
+        if not value:
+            return False
+        normalized = str(value).strip()
+        iso = self._JTL_COUNTRY_ALIASES.get(normalized.lower(), normalized)
+        return self._find_country(iso, caches)
+
+    def _process_supplier_master_data(self, run, supplier_rows, caches):
+        """Import the JTL "Lieferantenstammdaten" file as res.partner contacts
+        and mark them as vendors (supplier_rank >= 1).
+
+        Idempotent / no duplicates: an existing partner is reused — never
+        re-created — when it matches on any of, in priority order:
+          1. ref (JTL Lieferantennummer) — reliable on re-import
+          2. vat / USt-IdNr.      — strong business key, also catches partners
+                                    that already existed before the first import
+          3. email                — every JTL supplier row carries one
+          4. normalized company name (case-/whitespace-insensitive)
+        Only when none match is a new contact created.
+
+        We deliberately reuse the stock ``res.partner.ref`` field instead of
+        adding a custom column: a new stored column on res.partner collides
+        with Odoo's ``button_install`` handler (it reads res.partner before
+        migrations run), see migrations/19.0.1.0.7."""
+        logs = []
+        Partner = self.env["res.partner"]
+        normalizer = self.env["jtl.import.normalizer"]
+        for row in supplier_rows or []:
+            partner_data = dict((row.get("model_data") or {}).get("res.partner") or {})
+            supplier_name = partner_data.get("name") or row.get("name")
+            if not supplier_name:
+                continue
+            external_id = partner_data.get("ref") or row.get("external_id")
+
+            # country_id may arrive as a raw string ("D", "Deutschland") —
+            # resolve it to a res.country id before it reaches write()/create().
+            country_value = partner_data.get("country_id")
+            if country_value and not isinstance(country_value, int):
+                country = self._resolve_supplier_country(country_value, caches)
+                if country:
+                    partner_data["country_id"] = country.id
+                else:
+                    partner_data.pop("country_id", None)
+                    self._log_skip_create(
+                        logs,
+                        external_id or supplier_name,
+                        "country_id",
+                        _("Country '%s' could not be resolved and was skipped.") % country_value,
+                    )
+
+            vat = (partner_data.get("vat") or "").strip()
+            email = (partner_data.get("email") or "").strip()
+
+            # Match an existing contact instead of creating a duplicate.
+            # A fresh search() per row (no cache) guarantees we also see
+            # partners created earlier in the same batch.
+            partner = False
+            if external_id:
+                partner = Partner.search(
+                    [("is_company", "=", True), ("ref", "=", external_id)], limit=1
+                )
+            if not partner and vat:
+                partner = Partner.search(
+                    [("is_company", "=", True), ("vat", "=ilike", vat)], limit=1
+                )
+            if not partner and email:
+                partner = Partner.search(
+                    [("is_company", "=", True), ("email", "=ilike", email)], limit=1
+                )
+            if not partner:
+                normalized = normalizer.normalized_name(supplier_name)
+                partner = Partner.search(
+                    [("is_company", "=", True), ("normalized_name", "=", normalized)], limit=1
+                )
+
+            write_vals = self._extract_dynamic_fields("res.partner", partner_data)
+            write_vals["is_company"] = True
+
+            if partner:
+                # Never downgrade an already-ranked vendor; just ensure rank >= 1.
+                if partner.supplier_rank < 1:
+                    write_vals["supplier_rank"] = 1
+                partner.write(write_vals)
+                logs.append(
+                    {
+                        "article_number": external_id or False,
+                        "field_name": "supplier_master_update",
+                        "level": "info",
+                        "message": _("Supplier updated: %s") % partner.display_name,
+                    }
+                )
+            else:
+                if run.update_existing_only:
+                    self._log_skip_create(
+                        logs,
+                        external_id or False,
+                        "supplier_master_create",
+                        _("Supplier %s was skipped because 'Update Existing Only' is enabled.") % supplier_name,
+                    )
+                    continue
+                write_vals["supplier_rank"] = 1
+                partner = Partner.create(write_vals)
+                logs.append(
+                    {
+                        "article_number": external_id or False,
+                        "field_name": "supplier_master_create",
+                        "level": "info",
+                        "message": _("Supplier created: %s") % partner.display_name,
+                    }
+                )
+        return logs
+
     def _find_or_create_category(self, category_path, caches):
         if not category_path:
             return False
@@ -1062,7 +1184,7 @@ class JtlImportProcessor(models.AbstractModel):
                 )
                 return
 
-    def _process_stock(self, template, stock_rows, caches, logs, sku):
+    def _process_stock(self, run, template, stock_rows, caches, logs, sku):
         quant_model = self.env["stock.quant"]
         inventory_location = self.env["stock.location"].search([("usage", "=", "internal")], limit=1)
         for stock_data in stock_rows:
@@ -1110,7 +1232,7 @@ class JtlImportProcessor(models.AbstractModel):
         if "website_published" not in template._fields and seo_data:
             logs.append({"article_number": template.parent_sku, "field_name": "website", "level": "warning", "message": _("Website fields are unavailable because website_sale is not installed.")})
 
-    def _process_bom(self, template, bom_rows, caches, logs, sku):
+    def _process_bom(self, run, template, bom_rows, caches, logs, sku):
         if not bom_rows:
             return
         if "mrp.bom" not in self.env:

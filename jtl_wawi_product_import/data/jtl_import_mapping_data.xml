@@ -423,6 +423,105 @@
             <field name="transform_logic">trim</field>
             <field name="active">False</field>
         </record>
+        <!-- JTL "Lieferantenstammdaten" → res.partner (marked as vendor on import) -->
+        <record id="jtl_mapping_supplier_master_name" model="jtl.import.mapping">
+            <field name="name">Supplier Master Name</field>
+            <field name="sequence">600</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Firma</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">name</field>
+            <field name="required">1</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_external_id" model="jtl.import.mapping">
+            <field name="name">Supplier Master External ID</field>
+            <field name="sequence">601</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Lieferantennummer</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">ref</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_street" model="jtl.import.mapping">
+            <field name="name">Supplier Master Street</field>
+            <field name="sequence">602</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Straße</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">street</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_street2" model="jtl.import.mapping">
+            <field name="name">Supplier Master Street 2</field>
+            <field name="sequence">603</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Adresszusatz</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">street2</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_zip" model="jtl.import.mapping">
+            <field name="name">Supplier Master Zip</field>
+            <field name="sequence">604</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">PLZ</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">zip</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_city" model="jtl.import.mapping">
+            <field name="name">Supplier Master City</field>
+            <field name="sequence">605</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Ort</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">city</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_country" model="jtl.import.mapping">
+            <field name="name">Supplier Master Country</field>
+            <field name="sequence">606</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Land/ISO-Ländercode (2-stellig)</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">country_id</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_phone" model="jtl.import.mapping">
+            <field name="name">Supplier Master Phone</field>
+            <field name="sequence">607</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Telefon Zentrale</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">phone</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_email" model="jtl.import.mapping">
+            <field name="name">Supplier Master Email</field>
+            <field name="sequence">608</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">E-Mail</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">email</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_website" model="jtl.import.mapping">
+            <field name="name">Supplier Master Website</field>
+            <field name="sequence">609</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Webseite</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">website</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_vat" model="jtl.import.mapping">
+            <field name="name">Supplier Master VAT</field>
+            <field name="sequence">610</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">USt-IdNr.</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">vat</field>
+        </record>
+        <record id="jtl_mapping_supplier_master_comment" model="jtl.import.mapping">
+            <field name="name">Supplier Master Note</field>
+            <field name="sequence">611</field>
+            <field name="source_file_key">supplier_master</field>
+            <field name="source_column">Anmerkung</field>
+            <field name="target_model">res.partner</field>
+            <field name="target_field">comment</field>
+            <field name="transform_logic">trim</field>
+        </record>
         <record id="jtl_mapping_category_file_sku" model="jtl.import.mapping">
             <field name="name">Category File SKU</field>
             <field name="sequence">420</field>

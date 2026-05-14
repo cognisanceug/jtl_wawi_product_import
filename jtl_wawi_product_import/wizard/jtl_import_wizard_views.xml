@@ -34,6 +34,7 @@
                         <field name="category_root_id" options="{'no_create': True}"/>
                         <field name="headers_loaded" readonly="1"/>
                         <field name="mapping_validated" readonly="1"/>
+                        <field name="available_file_keys" invisible="1"/>
                         <field name="contacts_installed" readonly="1" invisible="1"/>
                         <field name="website_sale_installed" readonly="1" invisible="1"/>
                         <field name="product_variants_enabled" readonly="1" invisible="1"/>
@@ -60,6 +61,7 @@
                         <field name="variation_combination_file_data" filename="variation_combination_file_name"/>
                     </group>
                     <group>
+                        <field name="supplier_master_file_data" filename="supplier_master_file_name"/>
                         <field name="variation_definition_file_data" filename="variation_definition_file_name"/>
                         <field name="attribute_file_data" filename="attribute_file_name"/>
                         <field name="feature_file_data" filename="feature_file_name"/>
@@ -68,7 +70,7 @@
                 </group>
 
                 <notebook invisible="wizard_step == 'files'">
-                    <page string="Artikelstammdaten">
+                    <page string="Artikelstammdaten" invisible="',article_master,' not in available_file_keys">
                         <field name="article_master_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -95,7 +97,7 @@
                             </list>
                         </field>
                     </page>
-                    <page string="Hersteller">
+                    <page string="Hersteller" invisible="',manufacturer,' not in available_file_keys">
                         <field name="manufacturer_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -116,7 +118,7 @@
                                 </list>
                         </field>
                     </page>
-                    <page string="EU-RP">
+                    <page string="EU-RP" invisible="',eu_representative,' not in available_file_keys">
                         <field name="eu_representative_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -134,7 +136,7 @@
                                 </list>
                         </field>
                     </page>
-                    <page string="Kategorien">
+                    <page string="Kategorien" invisible="',category,' not in available_file_keys">
                         <field name="category_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -155,7 +157,7 @@
                                 </list>
                         </field>
                     </page>
-                    <page string="Lieferantenartikel">
+                    <page string="Lieferantenartikel" invisible="',supplierinfo,' not in available_file_keys">
                         <field name="supplierinfo_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -176,7 +178,29 @@
                             </list>
                         </field>
                     </page>
-                    <page string="Variationskombinationen">
+                    <page string="Lieferantenstammdaten" invisible="',supplier_master,' not in available_file_keys">
+                        <field name="supplier_master_mapping_line_ids" nolabel="1" context="{'active_test': False}">
+                            <list editable="bottom" limit="1000">
+                                <field name="is_reserved" column_invisible="1"/>
+                                <field name="active" readonly="is_reserved"/>
+                                <field name="import_enabled" string="Importieren" readonly="is_reserved"/>
+                                <field name="source_column_label" string="CSV-Spalte"/>
+                                <field name="sample_value"/>
+                                <field name="detected_ttype" string="Erkannt"/>
+                                <field name="target_model" readonly="is_reserved"/>
+                                <field name="target_field_id" string="Odoo-Feld" options="{'no_create': True}" readonly="is_reserved"/>
+                                <field name="target_field_name" string="Target (Pseudo/Lookup)" optional="show" readonly="is_reserved"/>
+                                <field name="relation_hint" string="Lookup-Hinweis" readonly="1" optional="show"/>
+                                <field name="create_field_if_missing" string="Neues Feld" readonly="is_reserved"/>
+                                <field name="new_field_name" readonly="is_reserved"/>
+                                <field name="custom_field_ttype" string="Neuer Feldtyp" readonly="is_reserved"/>
+                                <field name="transform_logic" readonly="is_reserved"/>
+                                <field name="status" readonly="1"/>
+                                <field name="note" readonly="1"/>
+                            </list>
+                        </field>
+                    </page>
+                    <page string="Variationskombinationen" invisible="',variation_combination,' not in available_file_keys">
                         <field name="variation_combination_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -194,7 +218,7 @@
                             </list>
                         </field>
                     </page>
-                    <page string="Variationen">
+                    <page string="Variationen" invisible="',variation_definition,' not in available_file_keys">
                         <field name="variation_definition_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -212,7 +236,7 @@
                                 </list>
                         </field>
                     </page>
-                    <page string="Attribute">
+                    <page string="Attribute" invisible="',attribute,' not in available_file_keys">
                         <field name="attribute_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -233,7 +257,7 @@
                                 </list>
                         </field>
                     </page>
-                    <page string="Eigene Merkmale">
+                    <page string="Eigene Merkmale" invisible="',feature,' not in available_file_keys">
                         <field name="feature_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>
@@ -254,7 +278,7 @@
                                 </list>
                         </field>
                     </page>
-                    <page string="Stueckliste">
+                    <page string="Stueckliste" invisible="',bom,' not in available_file_keys">
                         <field name="bom_mapping_line_ids" nolabel="1" context="{'active_test': False}">
                             <list editable="bottom" limit="1000">
                                 <field name="is_reserved" column_invisible="1"/>

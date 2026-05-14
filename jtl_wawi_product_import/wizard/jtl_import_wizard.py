@@ -29,6 +29,7 @@ SOURCE_FILE_SELECTION = [
     ("eu_representative", "EU RP"),
     ("category", "Kategorien"),
     ("supplierinfo", "Lieferantenartikel"),
+    ("supplier_master", "Lieferantenstammdaten"),
     ("variation_combination", "Variationskombinationen"),
     ("variation_definition", "Variationen"),
     ("attribute", "Attribute"),
@@ -45,6 +46,7 @@ FILE_MODEL_WHITELIST = {
     "eu_representative": ["res.partner"],
     "category": ["product.category", "product.public.category", "website", "product.product", "product.template"],
     "supplierinfo": ["res.partner", "product.supplierinfo", "product.template", "product.product"],
+    "supplier_master": ["res.partner"],
     "variation_combination": ["product.product", "product.template", "product.attribute", "product.attribute.value"],
     "variation_definition": ["product.attribute", "product.attribute.value", "product.template", "product.product"],
     "attribute": ["product.attribute", "product.attribute.value", "jtl.product.attribute.raw", "product.product", "product.template"],
@@ -108,6 +110,7 @@ REQUIRED_COLUMN_ALIASES = {
     "article_master": [("artikelnummer", _("Artikelnummer")), ("artikelname", _("Artikelname"))],
     "variation_combination": [("kindartikelnummer", _("Kind Artikelnummer"))],
     "supplierinfo": [("lieferant", _("Lieferant"))],
+    "supplier_master": [("firma", _("Firma"))],
     "bom": [("artikelnummerstuecklistenkomponente", _("Artikelnummer Stuecklistenkomponente"))],
 }
 
@@ -182,6 +185,21 @@ AUTO_MAPPING_ALIASES = {
     "feature": {
         "wert": ("product.template", "x_jtl_feature_value", "char"),
     },
+    "supplier_master": {
+        "firma": ("res.partner", "name", "char"),
+        "firmenzusatz": ("res.partner", "comment", "text"),
+        "strasse": ("res.partner", "street", "char"),
+        "adresszusatz": ("res.partner", "street2", "char"),
+        "plz": ("res.partner", "zip", "char"),
+        "ort": ("res.partner", "city", "char"),
+        "landisolaendercode": ("res.partner", "country_id", "char"),
+        "telefonzentrale": ("res.partner", "phone", "char"),
+        "email": ("res.partner", "email", "char"),
+        "webseite": ("res.partner", "website", "char"),
+        "ustidnr": ("res.partner", "vat", "char"),
+        "anmerkung": ("res.partner", "comment", "text"),
+        "lieferantennummer": ("res.partner", "ref", "char"),
+    },
 }
 
 CURATED_MODEL_FIELDS = {
@@ -189,7 +207,7 @@ CURATED_MODEL_FIELDS = {
     "product.product": ["default_code", "barcode", "weight", "parent_sku", "active"],
     "product.category": ["name", "parent_id"],
     "product.public.category": ["name", "parent_id"],
-    "res.partner": ["name", "email", "website", "phone", "mobile", "street", "street2", "zip", "city", "country_id", "is_company", "is_manufacturer", "manufacturer_external_id", "is_eu_responsible", "eu_responsible_external_id", "comment", "ref", "image_1920"],
+    "res.partner": ["name", "email", "website", "phone", "mobile", "street", "street2", "zip", "city", "country_id", "vat", "is_company", "is_manufacturer", "manufacturer_external_id", "is_eu_responsible", "eu_responsible_external_id", "comment", "ref", "image_1920"],
     "product.supplierinfo": ["partner_id", "product_tmpl_id", "product_id", "product_code", "price", "delay", "min_qty", "manufacturer_sku", "is_default_supplier"],
     "product.attribute": ["name", "create_variant"],
     "product.attribute.value": ["name", "attribute_id"],
@@ -216,6 +234,8 @@ class JtlImportWizard(models.TransientModel):
     category_file_data = fields.Binary(string="Kategoriedaten")
     supplierinfo_file_name = fields.Char()
     supplierinfo_file_data = fields.Binary(string="Lieferantenartikel")
+    supplier_master_file_name = fields.Char()
+    supplier_master_file_data = fields.Binary(string="Lieferantenstammdaten")
     variation_combination_file_name = fields.Char()
     variation_combination_file_data = fields.Binary(string="Variationskombinationen")
     variation_definition_file_name = fields.Char()
@@ -254,6 +274,7 @@ class JtlImportWizard(models.TransientModel):
     eu_representative_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="EU-RP-Daten", domain=[("source_file_key", "=", "eu_representative")])
     category_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Kategoriedaten", domain=[("source_file_key", "=", "category")])
     supplierinfo_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Lieferantenartikel", domain=[("source_file_key", "=", "supplierinfo")])
+    supplier_master_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Lieferantenstammdaten", domain=[("source_file_key", "=", "supplier_master")])
     variation_combination_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Variationskombinationen", domain=[("source_file_key", "=", "variation_combination")])
     variation_definition_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Variationen", domain=[("source_file_key", "=", "variation_definition")])
     attribute_mapping_line_ids = fields.One2many("jtl.import.wizard.line", "wizard_id", string="Attribute", domain=[("source_file_key", "=", "attribute")])
@@ -262,6 +283,17 @@ class JtlImportWizard(models.TransientModel):
     headers_loaded = fields.Boolean(readonly=True)
     mapping_validated = fields.Boolean(readonly=True)
     wizard_step = fields.Selection([("files", "Files"), ("mapping", "Mapping"), ("review", "Review")], default="files", required=True)
+    available_file_keys = fields.Char(
+        compute="_compute_available_file_keys",
+        help="Comma-wrapped list of source_file_keys that actually have mapping lines — "
+        "used by the form view to hide mapping tabs for files that were not uploaded.",
+    )
+
+    @api.depends("mapping_line_ids.source_file_key")
+    def _compute_available_file_keys(self):
+        for wizard in self:
+            keys = sorted(set(wizard.mapping_line_ids.mapped("source_file_key")))
+            wizard.available_file_keys = ("," + ",".join(keys) + ",") if keys else ""
 
     @api.depends("import_seo")
     def _compute_optional_module_status(self):
