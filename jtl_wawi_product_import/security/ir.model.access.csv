@@ -12,3 +12,5 @@ access_jtl_import_wizard_line_user,jtl.import.wizard.line.user,model_jtl_import_
 access_product_brand,access.product.brand,model_product_brand,base.group_user,1,1,1,1
 access_brand_channel_map,access.brand.channel.map,model_brand_channel_map,base.group_user,1,1,1,1
 access_product_brand_assign_wizard,access.product.brand.assign.wizard,model_product_brand_assign_wizard,base.group_user,1,1,1,0
+access_jtl_image_sync_user,jtl.image.sync.user,model_jtl_image_sync,base.group_user,1,1,0,0
+access_jtl_image_sync_manager,jtl.image.sync.manager,model_jtl_image_sync,base.group_system,1,1,1,1

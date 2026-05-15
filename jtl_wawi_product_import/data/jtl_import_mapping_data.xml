@@ -111,15 +111,6 @@
             <field name="target_field">active</field>
             <field name="transform_logic">boolean</field>
         </record>
-        <record id="jtl_mapping_seo_path" model="jtl.import.mapping">
-            <field name="name">SEO Path</field>
-            <field name="sequence">90</field>
-            <field name="source_file_key">article_master</field>
-            <field name="source_column">SEO Pfad</field>
-            <field name="target_model">product.template</field>
-            <field name="target_field">seo_path</field>
-            <field name="transform_logic">path</field>
-        </record>
         <record id="jtl_mapping_country_of_origin" model="jtl.import.mapping">
             <field name="name">Country of Origin</field>
             <field name="sequence">100</field>
@@ -178,6 +169,20 @@
             <field name="source_column">Hersteller</field>
             <field name="target_model">product.template</field>
             <field name="target_field">brand_name</field>
+            <field name="transform_logic">trim</field>
+        </record>
+        <!-- Also feed the Hersteller column into manufacturer_name so the
+             processor's partner match has a name to work with. Without this
+             the per-article match falls back to email/website which JTL
+             often shares across brands, causing the wrong manufacturer to
+             be assigned. -->
+        <record id="jtl_mapping_manufacturer_name_partner" model="jtl.import.mapping">
+            <field name="name">Hersteller (Partner-Name)</field>
+            <field name="sequence">161</field>
+            <field name="source_file_key">article_master</field>
+            <field name="source_column">Hersteller</field>
+            <field name="target_model">product.template</field>
+            <field name="target_field">manufacturer_name</field>
             <field name="transform_logic">trim</field>
         </record>
         <record id="jtl_mapping_manufacturer_email" model="jtl.import.mapping">
@@ -540,62 +545,10 @@
             <field name="target_field">name</field>
             <field name="transform_logic">trim</field>
         </record>
-        <record id="jtl_mapping_category_file_level_1" model="jtl.import.mapping">
-            <field name="name">Category File Level 1</field>
-            <field name="sequence">422</field>
-            <field name="source_file_key">category</field>
-            <field name="source_column">Kategorie Ebene 1</field>
-            <field name="target_model">product.category</field>
-            <field name="target_field">level_1</field>
-            <field name="transform_logic">trim</field>
-        </record>
-        <record id="jtl_mapping_category_file_level_2" model="jtl.import.mapping">
-            <field name="name">Category File Level 2</field>
-            <field name="sequence">423</field>
-            <field name="source_file_key">category</field>
-            <field name="source_column">Kategorie Ebene 2</field>
-            <field name="target_model">product.category</field>
-            <field name="target_field">level_2</field>
-            <field name="transform_logic">trim</field>
-        </record>
-        <record id="jtl_mapping_category_file_level_3" model="jtl.import.mapping">
-            <field name="name">Category File Level 3</field>
-            <field name="sequence">424</field>
-            <field name="source_file_key">category</field>
-            <field name="source_column">Kategorie Ebene 3</field>
-            <field name="target_model">product.category</field>
-            <field name="target_field">level_3</field>
-            <field name="transform_logic">trim</field>
-        </record>
-        <record id="jtl_mapping_category_file_level_4" model="jtl.import.mapping">
-            <field name="name">Category File Level 4</field>
-            <field name="sequence">425</field>
-            <field name="source_file_key">category</field>
-            <field name="source_column">Kategorie Ebene 4</field>
-            <field name="target_model">product.category</field>
-            <field name="target_field">level_4</field>
-            <field name="transform_logic">trim</field>
-        </record>
-        <record id="jtl_mapping_category_file_url_path_de" model="jtl.import.mapping">
-            <field name="name">Category File URL Path DE</field>
-            <field name="sequence">426</field>
-            <field name="source_file_key">category</field>
-            <field name="source_column">URL-Pfad</field>
-            <field name="target_model">product.template</field>
-            <field name="target_field">seo_path</field>
-            <field name="language_code">de_DE</field>
-            <field name="transform_logic">slug</field>
-        </record>
-        <record id="jtl_mapping_category_file_url_path_en" model="jtl.import.mapping">
-            <field name="name">Category File URL Path EN</field>
-            <field name="sequence">427</field>
-            <field name="source_file_key">category</field>
-            <field name="source_column">URL-Pfad Englisch</field>
-            <field name="target_model">product.template</field>
-            <field name="target_field">seo_path</field>
-            <field name="language_code">en_US</field>
-            <field name="transform_logic">slug</field>
-        </record>
+        <!-- Kategorie Ebene 1–4 werden vom Parser direkt anhand der Spaltennamen
+             gelesen und zur Kategorie-Hierarchie zusammengesetzt. Sie sind im
+             Wizard als reservierte Spalten gesperrt (RESERVED_COLUMN_KEYS) und
+             brauchen daher kein eigenes Default-Mapping. -->
         <record id="jtl_mapping_supplier_file_sku" model="jtl.import.mapping">
             <field name="name">Supplier File SKU</field>
             <field name="sequence">430</field>

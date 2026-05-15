@@ -77,13 +77,10 @@ class JtlImportMapping(models.Model):
     active = fields.Boolean(default=True)
     default_value = fields.Char()
 
-    _sql_constraints = [
-        (
-            "jtl_import_mapping_unique",
-            "unique(source_file_key, source_column, target_model, target_field, language_code)",
-            "The mapping combination must be unique.",
-        )
-    ]
+    _mapping_unique = models.Constraint(
+        "unique(source_file_key, source_column, target_model, target_field, language_code)",
+        "The mapping combination must be unique.",
+    )
 
     @api.constrains("source_column", "target_field")
     def _check_trimmed_values(self):

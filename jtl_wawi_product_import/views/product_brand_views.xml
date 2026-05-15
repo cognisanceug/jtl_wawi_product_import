@@ -23,7 +23,6 @@
                         <field name="name"/>
                         <field name="manufacturer_id"/>
                         <field name="gdpr_responsible_id" string="EU Responsible"/>
-                        <field name="brand_external_id"/>
                         <field name="active"/>
                     </group>
                     <notebook>

@@ -1,3 +1,4 @@
+from . import jtl_image_sync
 from . import jtl_import_log
 from . import jtl_import_mapping
 from . import jtl_import_profile

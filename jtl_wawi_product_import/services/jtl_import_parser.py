@@ -7,6 +7,42 @@ from collections import defaultdict
 
 from odoo import _, models
 
+# JTL tax class names → sales tax rate in percent. The "Steuerklasse" column
+# carries a class name (not a number); it is translated here and stored as
+# tax_rate, which the processor resolves to the matching account.tax record.
+# Keys are normalised (lowercase, umlauts spelled out) — see _normalize_tax_class.
+JTL_TAX_CLASS_RATES = {
+    "normaler steuersatz": 19.0,
+    "ermaessigter steuersatz": 7.0,
+    "steuerfrei": 0.0,
+    "nicht steuerbar": 0.0,
+    "ohne steuer": 0.0,
+    "innergemeinschaftliche lieferung": 0.0,
+}
+
+
+def _normalize_tax_class(value):
+    text = re.sub(r"\s+", " ", (value or "").strip().lower())
+    return text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+
+
+# "Global-Englisch: <Spalte>" columns carry the English text for a field. They
+# are imported as the en_US translation of the matching Odoo field. Keys are the
+# base column name lowercased; values are the canonical translation keys that
+# the processor's _apply_translations understands.
+GLOBAL_EN_FIELD_MAP = {
+    "artikelname": "name",
+    "name": "name",
+    "kurzbeschreibung": "short_description",
+    "beschreibung": "description",
+}
+GLOBAL_EN_PREFIXES = ("global-englisch", "global englisch", "englisch")
+
+# Columns prefixed "JTL-Wawi:" carry per-price-group prices. Each becomes an
+# Odoo product.pricelist named after the group. "Brutto" groups are converted
+# to net via the article's tax rate by the processor.
+JTL_PRICE_PREFIX = "jtl-wawi:"
+
 
 class JtlImportParser(models.AbstractModel):
     _name = "jtl.import.parser"
@@ -281,6 +317,7 @@ class JtlImportParser(models.AbstractModel):
                 "stock": [],
                 "seo": {},
                 "bom": [],
+                "source_file_keys": [],
             }
             product_sequence.append(sku)
         return grouped_rows[sku]
@@ -469,6 +506,8 @@ class JtlImportParser(models.AbstractModel):
                 continue
 
             record = self._ensure_group_record(grouped_rows, product_sequence, sku)
+            if file_key not in record["source_file_keys"]:
+                record["source_file_keys"].append(file_key)
             record["rows"].append(dict(row))
             record["row_numbers"].append(row_number)
             if parent_sku and parent_sku != sku:
@@ -477,6 +516,40 @@ class JtlImportParser(models.AbstractModel):
             if file_key == "variation_combination":
                 record["product"]["is_parent"] = False
             self._merge_scalar_values(record, prepared, allowed_array_models={"product.supplierinfo", "product.attribute", "product.image", "stock.quant", "website"})
+
+            # English overlay: "Global-Englisch: <Spalte>" columns feed the
+            # en_US translation of the matching field.
+            for column, raw_value in row.items():
+                if not column or ":" not in column or raw_value in (None, "", False):
+                    continue
+                prefix_part, base_part = column.split(":", 1)
+                if prefix_part.strip().lower() not in GLOBAL_EN_PREFIXES:
+                    continue
+                canonical = GLOBAL_EN_FIELD_MAP.get(base_part.strip().lower())
+                if canonical:
+                    record["translations"][canonical]["en_US"] = str(raw_value).strip()
+
+            # "JTL-Wawi: <Preisgruppe>" columns become Odoo pricelists.
+            price_groups = []
+            for column, raw_value in row.items():
+                if not column or raw_value in (None, "", False):
+                    continue
+                col_str = str(column)
+                if not col_str.lower().startswith(JTL_PRICE_PREFIX):
+                    continue
+                group_name = col_str.split(":", 1)[1].strip()
+                if not group_name:
+                    continue
+                price = self.env["jtl.import.normalizer"].normalize_decimal(raw_value)
+                if price in (None, False) or price == 0:
+                    continue
+                price_groups.append({
+                    "name": group_name,
+                    "price": price,
+                    "is_gross": "brutto" in group_name.lower(),
+                })
+            if price_groups:
+                record["product"]["pricelist_prices"] = price_groups
 
             supplier_data = prepared.get("product.supplierinfo", {})
             attribute_data = prepared.get("product.attribute", {})
@@ -492,12 +565,16 @@ class JtlImportParser(models.AbstractModel):
                 record["images"].append(image_data)
             if stock_data:
                 record["stock"].append(stock_data)
-            elif file_key == "article_master":
-                stock_enabled = self.env["jtl.import.normalizer"].normalize_boolean(
-                    self._get_row_value(row, "Bestandsführung aktiv")
-                )
+            else:
                 stock_quantity = self._get_row_value(row, "Auf Lager", "Auflager", "Bestand")
-                if stock_enabled and stock_quantity not in (None, False, ""):
+                # For the article master, stock is only taken when JTL flags the
+                # article as stock-managed. Other files (e.g. Lieferantenartikel)
+                # have no such flag — there the quantity column is taken as-is.
+                if file_key == "article_master" and not self.env["jtl.import.normalizer"].normalize_boolean(
+                    self._get_row_value(row, "Bestandsführung aktiv")
+                ):
+                    stock_quantity = False
+                if stock_quantity not in (None, False, ""):
                     record["stock"].append(
                         {
                             "quantity": self.env["jtl.import.normalizer"].normalize_decimal(stock_quantity),
@@ -553,21 +630,46 @@ class JtlImportParser(models.AbstractModel):
                     record["product"]["category_path"] = category_path
                 seo_path = self._get_row_value(row, "URL-Pfad")
                 if seo_path:
-                    record["product"]["seo_path"] = seo_path
                     record["seo"].setdefault("meta_title", self._get_row_value(row, "Titel-Tag"))
                     record["seo"]["public_category_name"] = seo_path
                 seo_path_en = self._get_row_value(row, "URL-Pfad Englisch")
                 if seo_path_en:
                     record["seo"].setdefault("public_category_name_translations", {})["en_US"] = seo_path_en
-            if file_key == "supplierinfo" and not supplier_data:
+            # "Warengruppe" is a flat single-level category. Used as the category
+            # path when no multi-level path was built from Kategorie Ebene 1–4.
+            if "category_path" not in record["product"]:
+                warengruppe = self._get_row_value(row, "Warengruppe")
+                if warengruppe:
+                    record["product"]["category_path"] = str(warengruppe).strip()
+            if file_key == "article_master":
+                tax_class = self._get_row_value(row, "Steuerklasse", "Steuerschlüssel")
+                if tax_class:
+                    rate = JTL_TAX_CLASS_RATES.get(_normalize_tax_class(tax_class))
+                    if rate is not None:
+                        record["product"].setdefault("tax_rate", rate)
+                # "USt. in %" belongs to the embedded supplier block — it is the
+                # purchase tax rate, resolved to supplier_taxes_id on the product.
+                purchase_ust = self._get_row_value(row, "USt. in %")
+                if purchase_ust not in (None, False, ""):
+                    purchase_rate = self.env["jtl.import.normalizer"].normalize_decimal(
+                        str(purchase_ust).replace("%", "").strip()
+                    )
+                    if purchase_rate not in (None, False):
+                        record["product"].setdefault("purchase_tax_rate", purchase_rate)
+            # The supplier block also appears embedded in the article master
+            # file (Lieferant / Artikelnummer (Lieferant) / Netto-EK / …).
+            if file_key in ("supplierinfo", "article_master") and not supplier_data:
+                normalizer = self.env["jtl.import.normalizer"]
                 supplier_name = self._get_row_value(row, "Lieferant")
                 if supplier_name:
                     record["suppliers"].append(
                         {
                             "supplier_name": supplier_name,
                             "supplier_product_number": self._get_row_value(row, "Artikelnummer (Lieferant)"),
-                            "purchase_price": self.env["jtl.import.normalizer"].normalize_decimal(self._get_row_value(row, "Netto-EK")),
-                            "minimum_quantity": self.env["jtl.import.normalizer"].normalize_decimal(self._get_row_value(row, "Mindestabnahme Lieferant")),
+                            "product_name": self._get_row_value(row, "Artikelname (Lieferant)"),
+                            "purchase_price": normalizer.normalize_decimal(self._get_row_value(row, "Netto-EK")),
+                            "minimum_quantity": normalizer.normalize_decimal(self._get_row_value(row, "Mindestabnahme Lieferant")),
+                            "lead_time": normalizer.normalize_decimal(self._get_row_value(row, "Lieferzeit in Tagen (Lieferant)")),
                             "default_supplier": self._get_row_value(row, "Ist Standardlieferant") in ("1", "Y", "y", "true", "True"),
                         }
                     )
@@ -647,10 +749,25 @@ class JtlImportParser(models.AbstractModel):
                 sku,
             ),
         )
+        # Deduplicated category descriptors from the category file. These let
+        # the processor build the category hierarchy in a single pass instead
+        # of walking every product row.
+        category_entries = {}
+        for sku, record in grouped_rows.items():
+            if "category" not in (record.get("source_file_keys") or []):
+                continue
+            category_path = (record.get("product") or {}).get("category_path")
+            if not category_path or category_path in category_entries:
+                continue
+            category_entries[category_path] = {
+                "category_path": category_path,
+                "seo": dict(record.get("seo") or {}),
+            }
         return {
             "filename": ", ".join(processed_file_names),
             "skus": ordered_skus,
             "products": grouped_rows,
+            "categories": list(category_entries.values()),
             "manufacturers": manufacturer_rows,
             "eu_responsibles": eu_responsible_rows,
             "suppliers_master": supplier_master_rows,

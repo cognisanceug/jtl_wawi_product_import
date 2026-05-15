@@ -49,10 +49,7 @@ class BrandChannelMap(models.Model):
     external_id = fields.Char(string="Externe Marken-ID")
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        (
-            "brand_channel_unique",
-            "unique(brand_id, channel)",
-            "Es existiert bereits ein Mapping fuer diese Marke und diesen Kanal.",
-        )
-    ]
+    _brand_channel_unique = models.Constraint(
+        "unique(brand_id, channel)",
+        "Es existiert bereits ein Mapping fuer diese Marke und diesen Kanal.",
+    )

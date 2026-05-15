@@ -5,13 +5,10 @@ from odoo.exceptions import UserError
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
-    _sql_constraints = [
-        (
-            "product_template_barcode_unique",
-            "unique(barcode)",
-            "The barcode must be unique.",
-        ),
-    ]
+    _barcode_unique = models.Constraint(
+        "unique(barcode)",
+        "The barcode must be unique.",
+    )
 
     manufacturer_partner_id = fields.Many2one(
         "res.partner",
@@ -52,9 +49,7 @@ class ProductTemplate(models.Model):
     )
     manufacturer_sku = fields.Char(string="HAN", copy=False, help="Hersteller-Artikelnummer (Manufacturer Article Number).")
     parent_sku = fields.Char(string="Parent SKU", copy=False, index=True)
-    seo_path = fields.Char(string="SEO Path", copy=False)
-    meta_title = fields.Char(string="Meta Title", translate=True, copy=False)
-    meta_description = fields.Text(string="Meta Description", translate=True, copy=False)
+    jtl_image_sync_done = fields.Boolean(string="Shop image sync done", default=False, copy=False, index=True)
     length = fields.Float(string="Length", digits=(16, 6), copy=False)
     width = fields.Float(string="Width", digits=(16, 6), copy=False)
     height = fields.Float(string="Height", digits=(16, 6), copy=False)

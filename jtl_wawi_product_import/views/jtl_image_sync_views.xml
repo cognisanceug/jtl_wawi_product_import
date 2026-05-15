@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_jtl_image_sync_form" model="ir.ui.view">
+        <field name="name">jtl.image.sync.form</field>
+        <field name="model">jtl.image.sync</field>
+        <field name="arch" type="xml">
+            <form string="JTL Shop Image Sync">
+                <header>
+                    <button name="action_run_now" type="object" string="Jetzt synchronisieren" class="btn-primary"/>
+                    <button name="action_reset_sync" type="object" string="Sync zurücksetzen" class="btn-secondary"
+                            confirm="Alle Produkte werden beim nächsten Lauf erneut verarbeitet. Fortfahren?"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_pending_products" type="object" class="oe_stat_button" icon="fa-clock-o">
+                            <field name="pending_count" widget="statinfo" string="Noch offen"/>
+                        </button>
+                        <button name="action_open_done_products" type="object" class="oe_stat_button" icon="fa-check">
+                            <field name="done_count" widget="statinfo" string="Fertig"/>
+                        </button>
+                        <button name="action_open_unmatched_products" type="object" class="oe_stat_button" icon="fa-image">
+                            <field name="unmatched_count" widget="statinfo" string="Ohne Bild"/>
+                        </button>
+                        <button class="oe_stat_button" icon="fa-cubes" disabled="1">
+                            <field name="total_count" widget="statinfo" string="Gesamt"/>
+                        </button>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        Lädt Produktbilder aus der Shop-Sitemap und ordnet sie per Artikelname (Slug) den Produkten zu.
+                        Der Cron-Job „JTL: Produktbilder aus Shop-Sitemap synchronisieren" verarbeitet pro Lauf
+                        <strong>Batch Size</strong> Produkte — er ist standardmäßig <strong>deaktiviert</strong> und muss
+                        unter Einstellungen → Technisch → Geplante Aktionen aktiviert werden.
+                        „<strong>Sync zurücksetzen</strong>" oben setzt alle Produkte wieder auf „offen", sodass der nächste
+                        Lauf wieder von vorn beginnt.
+                    </div>
+                    <group string="Fortschritt">
+                        <field name="progress_label" nolabel="1" readonly="1" class="fw-bold fs-4"/>
+                        <field name="progress_percentage" widget="progressbar" readonly="1" nolabel="1"/>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sitemap_url"/>
+                            <field name="batch_size"/>
+                        </group>
+                        <group>
+                            <field name="overwrite_existing"/>
+                            <field name="import_gallery"/>
+                            <field name="placeholder_markers" placeholder="keinBild,no_picture"/>
+                            <field name="shop_search_url_template" placeholder="https://www.schaltauge.com/search/?qs={sku}"/>
+                            <field name="search_fallback_max_per_batch"/>
+                            <field name="last_run" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Letztes Ergebnis"/>
+                    <field name="last_result" nolabel="1" readonly="1"/>
+                    <separator string="Produkte ohne Bild-Treffer (max. 500)"/>
+                    <field name="unmatched_product_ids" nolabel="1" readonly="1">
+                        <list create="false" delete="false" edit="false">
+                            <field name="default_code" string="SKU"/>
+                            <field name="name"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_jtl_image_sync" model="ir.actions.act_window">
+        <field name="name">Bilder-Sync (Shop)</field>
+        <field name="res_model">jtl.image.sync</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="jtl_image_sync_config"/>
+        <field name="target">current</field>
+    </record>
+
+    <menuitem id="menu_jtl_image_sync" name="Bilder-Sync" parent="jtl_wawi_product_import.menu_jtl_import_root"
+              action="action_jtl_image_sync" sequence="45"/>
+</odoo>

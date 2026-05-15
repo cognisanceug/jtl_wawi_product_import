@@ -8,6 +8,7 @@
                 <header>
                     <button name="action_previous_step" type="object" string="Back" class="btn-secondary" invisible="wizard_step == 'files'"/>
                     <button name="action_apply_profile" type="object" string="Load Mapping" class="btn-secondary" invisible="wizard_step != 'files' or not profile_id"/>
+                    <button name="action_update_profile" type="object" string="Profil aktualisieren" class="btn-secondary" invisible="wizard_step != 'files' or not profile_id"/>
                     <button name="action_use_default_profile" type="object" string="Standard-Mapping" class="btn-secondary" invisible="wizard_step != 'files'"/>
                     <button name="action_reset_mapping" type="object" string="Reset Mapping" class="btn-secondary" invisible="wizard_step == 'files'"/>
                     <button name="action_next_step" type="object" string="Next" class="btn-secondary" invisible="wizard_step == 'review'"/>
@@ -32,6 +33,8 @@
                         <field name="update_existing_only"/>
                         <field name="barcode_match_update"/>
                         <field name="category_root_id" options="{'no_create': True}"/>
+                        <field name="category_import_mode"/>
+                        <field name="import_limit"/>
                         <field name="headers_loaded" readonly="1"/>
                         <field name="mapping_validated" readonly="1"/>
                         <field name="available_file_keys" invisible="1"/>
@@ -45,6 +48,7 @@
                         <field name="import_images"/>
                         <field name="import_gallery_images"/>
                         <field name="import_seo"/>
+                        <field name="manufacturer_create_brand" invisible="not manufacturer_file_data"/>
                         <field name="save_profile"/>
                         <field name="profile_name" invisible="not save_profile"/>
                         <field name="profile_description" invisible="not save_profile"/>

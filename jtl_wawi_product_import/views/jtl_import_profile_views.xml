@@ -23,11 +23,26 @@
                 </header>
                 <sheet>
                     <group>
-                        <field name="name"/>
-                        <field name="description"/>
-                        <field name="is_default"/>
-                        <field name="company_id"/>
-                        <field name="active"/>
+                        <group>
+                            <field name="name"/>
+                            <field name="description"/>
+                            <field name="is_default"/>
+                            <field name="company_id"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Import-Einstellungen">
+                            <field name="batch_size"/>
+                            <field name="category_root_id" options="{'no_create': True}"/>
+                            <field name="category_import_mode"/>
+                            <field name="update_existing_only"/>
+                            <field name="barcode_match_update"/>
+                            <field name="manufacturer_create_brand"/>
+                            <field name="import_stock"/>
+                            <field name="import_images"/>
+                            <field name="import_gallery_images"/>
+                            <field name="import_seo"/>
+                            <field name="dry_run"/>
+                        </group>
                     </group>
                     <field name="line_ids">
                         <list editable="bottom">

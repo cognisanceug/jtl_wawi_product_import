@@ -35,6 +35,7 @@ class JtlImportRun(models.Model):
     source_attachment_id = fields.Many2one("ir.attachment", readonly=True, copy=False)
     payload_attachment_id = fields.Many2one("ir.attachment", readonly=True, copy=False)
     validation_message = fields.Text(readonly=True)
+    result_message = fields.Text(readonly=True, string="Result")
     batch_size = fields.Integer(default=200, required=True)
     current_index = fields.Integer(default=0, readonly=True)
     total_products = fields.Integer(default=0, readonly=True)
@@ -44,6 +45,18 @@ class JtlImportRun(models.Model):
     import_gallery_images = fields.Boolean(default=False)
     import_seo = fields.Boolean(default=False)
     barcode_match_update = fields.Boolean(default=True, string="Barcode Match Update")
+    manufacturer_create_brand = fields.Boolean(default=False, string="Hersteller als Marke importieren")
+    category_import_mode = fields.Selection(
+        [
+            ("both", "Lager- und E-Commerce-Kategorien"),
+            ("inventory", "Nur Lagerkategorien"),
+            ("ecommerce", "Nur E-Commerce-Kategorien"),
+        ],
+        string="Kategorien importieren als",
+        default="both",
+        required=True,
+    )
+    import_limit = fields.Integer(default=0, string="Import-Limit (0 = alle)", readonly=True)
     dry_run = fields.Boolean(default=False)
     update_existing_only = fields.Boolean(default=False)
     category_root_id = fields.Many2one(
@@ -63,9 +76,10 @@ class JtlImportRun(models.Model):
     log_ids = fields.One2many("jtl.import.log", "run_id", readonly=True)
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company)
 
-    _sql_constraints = [
-        ("jtl_import_run_batch_size_positive", "check(batch_size > 0)", "Batch size must be greater than zero."),
-    ]
+    _batch_size_positive = models.Constraint(
+        "check(batch_size > 0)",
+        "Batch size must be greater than zero.",
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -134,6 +148,7 @@ class JtlImportRun(models.Model):
                     "current_index": 0,
                     "last_batch_number": 0,
                     "last_error": False,
+                    "result_message": False,
                     "created_products": 0,
                     "updated_products": 0,
                     "created_suppliers": 0,

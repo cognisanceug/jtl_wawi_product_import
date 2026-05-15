@@ -2,6 +2,13 @@ import re
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import LazyTranslate
+
+# Module-level dictionaries below capture translatable strings. The eager
+# `_()` evaluates at import time when no language context exists yet
+# (Odoo 19 logs a warning + full stack trace for every such call). Use
+# LazyTranslate so the actual gettext lookup is deferred to first access.
+_lt = LazyTranslate(__name__)
 
 
 TARGET_MODEL_SELECTION = [
@@ -107,11 +114,11 @@ CODE_LIKE_HEADERS = {
 }
 
 REQUIRED_COLUMN_ALIASES = {
-    "article_master": [("artikelnummer", _("Artikelnummer")), ("artikelname", _("Artikelname"))],
-    "variation_combination": [("kindartikelnummer", _("Kind Artikelnummer"))],
-    "supplierinfo": [("lieferant", _("Lieferant"))],
-    "supplier_master": [("firma", _("Firma"))],
-    "bom": [("artikelnummerstuecklistenkomponente", _("Artikelnummer Stuecklistenkomponente"))],
+    "article_master": [("artikelnummer", _lt("Artikelnummer")), ("artikelname", _lt("Artikelname"))],
+    "variation_combination": [("kindartikelnummer", _lt("Kind Artikelnummer"))],
+    "supplierinfo": [("lieferant", _lt("Lieferant"))],
+    "supplier_master": [("firma", _lt("Firma"))],
+    "bom": [("artikelnummerstuecklistenkomponente", _lt("Artikelnummer Stuecklistenkomponente"))],
 }
 
 # Columns that are read directly by the parser for internal linking and
@@ -119,28 +126,84 @@ REQUIRED_COLUMN_ALIASES = {
 # rendered as locked rows in the wizard so the user can see what the
 # column is being used for.
 RESERVED_COLUMN_KEYS = {
-    "identifizierungsspaltevaterartikel": _("Reserved — used internally to link variant products to their parent article"),
-    "istvaterartikel": _("Reserved — JTL parent flag, derived automatically from variant linkage"),
+    "identifizierungsspaltevaterartikel": _lt("Reserved — used internally to link variant products to their parent article"),
+    "istvaterartikel": _lt("Reserved — JTL parent flag, derived automatically from variant linkage"),
+    "kategorieebene1": _lt("Reserved — read internally to build the category hierarchy (Kategorie Ebene 1–4)"),
+    "kategorieebene2": _lt("Reserved — read internally to build the category hierarchy (Kategorie Ebene 1–4)"),
+    "kategorieebene3": _lt("Reserved — read internally to build the category hierarchy (Kategorie Ebene 1–4)"),
+    "kategorieebene4": _lt("Reserved — read internally to build the category hierarchy (Kategorie Ebene 1–4)"),
+    "steuerklasse": _lt("Reserved — JTL tax class, translated internally to the matching sales tax (e.g. 'normaler steuersatz' → 19%)"),
+    "steuerschluessel": _lt("Reserved — JTL tax class, translated internally to the matching sales tax (e.g. 'normaler steuersatz' → 19%)"),
+    "warengruppe": _lt("Reserved — read internally as a single-level product category (inventory / e-commerce per import mode)"),
+    "auflager": _lt("Reserved — read internally as the stock quantity (applied when 'Import Stock' is enabled)"),
+    "bestand": _lt("Reserved — read internally as the stock quantity (applied when 'Import Stock' is enabled)"),
 }
+
+
+# Columns reserved only within a specific file, matched on the raw label.
+# normalize_header_key() strips the "(Lieferant)" suffix that disambiguates
+# these from the product's own columns, so they need a file-scoped exact match.
+RESERVED_COLUMN_LABELS_BY_FILE = {
+    "article_master": {
+        "lieferant": _lt("Reserved — read internally as the product's supplier"),
+        "artikelnummer (lieferant)": _lt("Reserved — read internally as the supplier product code"),
+        "artikelname (lieferant)": _lt("Reserved — read internally as the supplier's product name"),
+        "netto-ek": _lt("Reserved — read internally as the supplier purchase price"),
+        "ust. in %": _lt("Reserved — read internally as the purchase tax (supplier tax)"),
+        "lieferzeit in tagen (lieferant)": _lt("Reserved — read internally as the supplier delivery lead time"),
+    },
+}
+
+
+def get_reserved_column_note(normalized_key, file_key=None, raw_label=None):
+    """Reserved-column note for a header, or None. Besides the explicit keys
+    above, the 'Global-Englisch: …' family is reserved (imported as the English
+    translation), and some columns are reserved only within a specific file."""
+    if normalized_key in RESERVED_COLUMN_KEYS:
+        return RESERVED_COLUMN_KEYS[normalized_key]
+    if normalized_key.startswith("globalenglisch"):
+        return _("Reserved — imported as the English translation of the matching field")
+    if normalized_key.startswith("jtlwawi"):
+        return _("Reserved — imported as an Odoo pricelist (one pricelist per JTL price group)")
+    if file_key and raw_label:
+        note = RESERVED_COLUMN_LABELS_BY_FILE.get(file_key, {}).get(raw_label.strip().lower())
+        if note:
+            return note
+    return None
+
+# Scalar import settings stored on a mapping profile and restored when the
+# profile is applied. category_root_id is a Many2one and handled separately.
+PROFILE_SETTING_FIELDS = [
+    "batch_size",
+    "import_stock",
+    "import_images",
+    "import_gallery_images",
+    "import_seo",
+    "barcode_match_update",
+    "update_existing_only",
+    "dry_run",
+    "manufacturer_create_brand",
+    "category_import_mode",
+]
 
 # Hints rendered for pseudo target_field names that the processor
 # resolves into a real Odoo relation during import. Shown in the
 # 'Hinweis' column so the user understands what happens with the
 # string value at import time.
 PSEUDO_FIELD_HINTS = {
-    "brand_name": _("→ Lookup product.brand by name (created if missing)"),
-    "manufacturer_name": _("→ Lookup res.partner manufacturer by name (created if missing)"),
-    "eu_responsible_name": _("→ Lookup res.partner EU representative by name (created if missing)"),
-    "supplier_name": _("→ Lookup res.partner supplier by name (created with supplier_rank=1)"),
-    "supplier_product_number": _("→ Stored as product.supplierinfo.product_code (supplier SKU)"),
-    "manufacturer_external_id": _("→ Stored on res.partner.manufacturer_external_id; used for follow-up matches"),
-    "eu_responsible_external_id": _("→ Stored on res.partner.eu_responsible_external_id; used for follow-up matches"),
-    "brand_external_id": _("→ Stored on product.brand.brand_external_id; used for follow-up matches"),
-    "category_path": _("→ Lookup/create product.category hierarchy from path"),
-    "country_of_origin": _("→ Lookup res.country by name or ISO code"),
-    "parent_sku": _("→ Variant linkage: matches parent product by SKU"),
-    "gross_sales_price": _("→ Gross price; converted to list_price via tax_rate"),
-    "tax_rate": _("→ Tax rate used for gross→net price conversion"),
+    "brand_name": _lt("→ Lookup product.brand by name (created if missing)"),
+    "manufacturer_name": _lt("→ Lookup res.partner manufacturer by name (created if missing)"),
+    "eu_responsible_name": _lt("→ Lookup res.partner EU representative by name (created if missing)"),
+    "supplier_name": _lt("→ Lookup res.partner supplier by name (created with supplier_rank=1)"),
+    "supplier_product_number": _lt("→ Stored as product.supplierinfo.product_code (supplier SKU)"),
+    "manufacturer_external_id": _lt("→ Stored on res.partner.manufacturer_external_id; used for follow-up matches"),
+    "eu_responsible_external_id": _lt("→ Stored on res.partner.eu_responsible_external_id; used for follow-up matches"),
+    "brand_external_id": _lt("→ Stored on product.brand.brand_external_id; used for follow-up matches"),
+    "category_path": _lt("→ Lookup/create product.category hierarchy from path"),
+    "country_of_origin": _lt("→ Lookup res.country by name or ISO code"),
+    "parent_sku": _lt("→ Variant linkage: matches parent product by SKU"),
+    "gross_sales_price": _lt("→ Gross price; converted to list_price via tax_rate"),
+    "tax_rate": _lt("→ Tax rate used for gross→net price conversion"),
 }
 
 
@@ -169,7 +232,6 @@ AUTO_MAPPING_ALIASES = {
         "uvp": ("product.template", "compare_list_price", "float"),
         "hersteller": ("product.template", "x_jtl_manufacturer_id", "many2one"),
         "herkunftsland": ("product.template", "country_of_origin", "char"),
-        "urlpfad": ("product.template", "seo_path", "char"),
     },
     "supplierinfo": {
         "lieferant": ("res.partner", "name", "char"),
@@ -203,7 +265,7 @@ AUTO_MAPPING_ALIASES = {
 }
 
 CURATED_MODEL_FIELDS = {
-    "product.template": ["name", "barcode", "weight", "list_price", "standard_price", "categ_id", "description_sale", "description", "website_description", "manufacturer_id", "manufacturer_partner_id", "manufacturer_sku", "seo_path", "hs_code", "country_of_origin", "brand_id", "sale_delay", "image_1920", "default_code", "is_storable", "type", "active", "sale_ok", "purchase_ok", "compare_list_price"],
+    "product.template": ["name", "barcode", "weight", "list_price", "standard_price", "categ_id", "description_sale", "description", "website_description", "manufacturer_id", "manufacturer_partner_id", "manufacturer_sku", "hs_code", "country_of_origin", "brand_id", "sale_delay", "image_1920", "default_code", "is_storable", "type", "active", "sale_ok", "purchase_ok", "compare_list_price"],
     "product.product": ["default_code", "barcode", "weight", "parent_sku", "active"],
     "product.category": ["name", "parent_id"],
     "product.public.category": ["name", "parent_id"],
@@ -254,6 +316,29 @@ class JtlImportWizard(models.TransientModel):
     import_gallery_images = fields.Boolean(default=False)
     import_seo = fields.Boolean(default=False)
     barcode_match_update = fields.Boolean(default=True, string="Barcode Match Update", help="When ticked the importer also matches existing products by barcode if no SKU match was found, before creating a new record.")
+    manufacturer_create_brand = fields.Boolean(
+        default=False,
+        string="Hersteller als Marke importieren",
+        help="Legt zu jedem importierten Hersteller eine gleichnamige Marke (product.brand) an und verknüpft sie direkt mit dem Hersteller-Kontakt.",
+    )
+    category_import_mode = fields.Selection(
+        [
+            ("both", "Lager- und E-Commerce-Kategorien"),
+            ("inventory", "Nur Lagerkategorien"),
+            ("ecommerce", "Nur E-Commerce-Kategorien"),
+        ],
+        string="Kategorien importieren als",
+        default="both",
+        required=True,
+        help="Steuert, ob aus dem Kategorie-Pfad Lagerkategorien (product.category), "
+        "E-Commerce-Kategorien (product.public.category) oder beide angelegt werden.",
+    )
+    import_limit = fields.Integer(
+        default=0,
+        string="Import-Limit (0 = alle)",
+        help="Begrenzt die Anzahl der importierten Artikel — z.B. 100 für einen Test. "
+        "0 bedeutet keine Begrenzung. Stammdaten (Hersteller, Kategorien) sind nicht betroffen.",
+    )
     category_root_id = fields.Many2one(
         "product.category",
         string="Root Category",
@@ -309,12 +394,46 @@ class JtlImportWizard(models.TransientModel):
             wizard.product_variants_enabled = self.env.user.has_group("product.group_product_variant")
             wizard.compare_list_price_enabled = compare_list_price_available
 
-    @api.depends("contacts_installed", "website_sale_installed", "product_variants_enabled", "compare_list_price_enabled", "import_seo", "variation_combination_file_data", "variation_definition_file_data")
+    @api.depends("contacts_installed", "website_sale_installed", "product_variants_enabled", "compare_list_price_enabled", "import_seo", "category_import_mode", "category_file_data", "article_master_file_data", "variation_combination_file_data", "variation_definition_file_data")
     def _compute_precheck_message(self):
         for wizard in self:
             messages = []
             messages.append(_("`contacts` installed: %s") % (_("Yes") if wizard.contacts_installed else _("No")))
             messages.append(_("`website_sale` installed: %s") % (_("Yes") if wizard.website_sale_installed else _("No")))
+            if wizard.category_file_data and not wizard.article_master_file_data:
+                messages.append(_(
+                    "Category file <strong>without</strong> article master: the category hierarchy is built and "
+                    "assigned to <strong>existing</strong> products (matched by SKU). <strong>No new products are "
+                    "created</strong> — import the article master file for that. The review step lists which "
+                    "articles are matched."
+                ))
+            if wizard.category_import_mode == "inventory":
+                messages.append(_(
+                    "Categories: <strong>only inventory categories</strong> (<code>product.category</code>) "
+                    "are imported."
+                ))
+            elif wizard.category_import_mode == "ecommerce":
+                if wizard.website_sale_installed:
+                    messages.append(_(
+                        "Categories: <strong>only e-commerce categories</strong> "
+                        "(<code>product.public.category</code>) are imported."
+                    ))
+                else:
+                    messages.append(_(
+                        "Categories: e-commerce only is selected, but `website_sale` is not installed "
+                        "— the precheck will block the import."
+                    ))
+            else:
+                if wizard.website_sale_installed:
+                    messages.append(_(
+                        "Categories: <strong>both</strong> inventory categories (<code>product.category</code>) "
+                        "and e-commerce categories (<code>product.public.category</code>) are imported."
+                    ))
+                else:
+                    messages.append(_(
+                        "Categories: <strong>only inventory categories</strong> (<code>product.category</code>) "
+                        "are imported — e-commerce categories are skipped because `website_sale` is not installed."
+                    ))
             messages.append(_("Product variants enabled: %s") % (_("Yes") if wizard.product_variants_enabled else _("No")))
             if wizard.compare_list_price_enabled:
                 messages.append(_("UVP / Compare Price (compare_list_price) available: Yes"))
@@ -348,6 +467,8 @@ class JtlImportWizard(models.TransientModel):
         self.ensure_one()
         if self.import_seo and not self.website_sale_installed:
             raise UserError(_("SEO import is enabled, but `website_sale` is not installed."))
+        if self.category_import_mode == "ecommerce" and not self.website_sale_installed:
+            raise UserError(_("Category import mode is set to e-commerce only, but `website_sale` is not installed."))
         if (self.variation_combination_file_data or self.variation_definition_file_data) and not self.product_variants_enabled:
             raise UserError(_("Variation files were uploaded, but Odoo product variants are not enabled."))
 
@@ -369,15 +490,25 @@ class JtlImportWizard(models.TransientModel):
                 target[label] = line
 
         lookup = {}
+        # Profile lines take precedence — they are added first and _add_mapping
+        # uses setdefault, so the built-in defaults below cannot overwrite them.
         if self.profile_id:
             for line in self.profile_id.line_ids.filtered(lambda l: l.active and l.source_file_key == file_key):
                 _add_mapping(lookup, line)
-            return lookup
+        # Built-in defaults still fill in any columns the profile does not cover
+        # (e.g. the attribute/feature file when the profile was saved from an
+        # article-only import).
         default_mappings = self.env["jtl.import.mapping"].search([("active", "=", True), ("source_file_key", "=", file_key)], order="sequence, id")
         for mapping in default_mappings:
             _add_mapping(lookup, mapping)
         for label in column_labels:
             if label in lookup:
+                continue
+            # Loose, normalized matching is only safe for plain column names.
+            # A label with a "(...)" qualifier (e.g. "Kurzbeschreibung (Druck/
+            # Mailen/Faxen)") must match a default mapping exactly — otherwise
+            # several distinct JTL columns collide onto the same target field.
+            if "(" in (label or ""):
                 continue
             normalized = normalize_header_key(label)
             for mapping in default_mappings:
@@ -413,7 +544,11 @@ class JtlImportWizard(models.TransientModel):
 
     def _guess_mapping_for_column(self, file_key, column_label, sample_value, values):
         normalized = normalize_header_key(column_label)
-        alias = AUTO_MAPPING_ALIASES.get(file_key, {}).get(normalized)
+        # Columns with a "(...)" qualifier are JTL output-context / language
+        # variants (e.g. "Kurzbeschreibung (Druck/Mailen/Faxen)") — they must
+        # not be auto-guessed to the plain field, or several columns would
+        # target the same field. They only map via an exact default mapping.
+        alias = None if "(" in (column_label or "") else AUTO_MAPPING_ALIASES.get(file_key, {}).get(normalized)
         guessed_ttype = self._guess_field_type(column_label, values, sample_value)
         if not alias:
             return {"custom_field_ttype": guessed_ttype, "transform_logic": self._guess_transform_logic(guessed_ttype)}
@@ -463,7 +598,25 @@ class JtlImportWizard(models.TransientModel):
                         target_field = self.env["ir.model.fields"].search([("model", "=", mapping.target_model), ("name", "=", mapping.target_field)], limit=1)
                         target_field_id = target_field.id if target_field else False
                 normalized_key = normalize_header_key(item["source_column_label"] or item["source_column"])
-                is_reserved = normalized_key in RESERVED_COLUMN_KEYS
+                is_reserved = get_reserved_column_note(
+                    normalized_key, file_key, item["source_column_label"] or item["source_column"]
+                ) is not None
+                create_field_value = False if is_reserved else (
+                    getattr(mapping, "create_field", False) if mapping else guessed.get("create_field_if_missing", False)
+                )
+                if is_reserved:
+                    new_field_name_value = False
+                    new_field_label_value = False
+                elif mapping:
+                    new_field_name_value = getattr(mapping, "new_field_name", False)
+                    new_field_label_value = getattr(mapping, "new_field_label", False)
+                else:
+                    new_field_name_value = guessed.get("new_field_name", False)
+                    new_field_label_value = guessed.get("new_field_label", False)
+                # Only prefill the field-name columns when a new field is
+                # actually going to be created — keep plain "Ignored" rows blank.
+                if create_field_value and not new_field_label_value:
+                    new_field_label_value = item["source_column_label"]
                 values = {
                     "sequence": sequence * 10,
                     "source_file_key": file_key,
@@ -481,9 +634,9 @@ class JtlImportWizard(models.TransientModel):
                     "import_enabled": False if is_reserved else (getattr(mapping, "import_enabled", True) if mapping else bool(guessed.get("target_model") or guessed.get("active") or guessed.get("import_enabled"))),
                     "is_reserved": is_reserved,
                     "default_value": getattr(mapping, "default_value", False) if mapping else False,
-                    "create_field_if_missing": False if is_reserved else (getattr(mapping, "create_field", False) if mapping else guessed.get("create_field_if_missing", False)),
-                    "new_field_name": False if is_reserved else (getattr(mapping, "new_field_name", False) if mapping else guessed.get("new_field_name", False)),
-                    "new_field_label": False if is_reserved else (getattr(mapping, "new_field_label", False) if mapping else (guessed.get("new_field_label") or item["source_column_label"])),
+                    "create_field_if_missing": create_field_value,
+                    "new_field_name": new_field_name_value,
+                    "new_field_label": new_field_label_value,
                     "relation_model": False if is_reserved else (getattr(mapping, "relation_model", False) if mapping else False),
                 }
                 line_commands.append((0, 0, values))
@@ -506,10 +659,34 @@ class JtlImportWizard(models.TransientModel):
         self._build_mapping_lines(analysis_by_file)
         return self._reopen_wizard()
 
+    def _apply_profile_settings(self):
+        """Copy the import settings stored on the selected profile onto the
+        wizard so applying a profile also restores Root Category, batch size
+        and the import toggles — not only the mapping lines. Field presence is
+        checked so a code/DB version skew can never break profile selection."""
+        profile = self.profile_id
+        if not profile:
+            return
+        vals = {
+            field: profile[field]
+            for field in PROFILE_SETTING_FIELDS
+            if field in profile._fields and field in self._fields
+        }
+        if "category_root_id" in profile._fields:
+            vals["category_root_id"] = profile.category_root_id.id or False
+        if vals:
+            self.update(vals)
+
+    @api.onchange("profile_id")
+    def _onchange_profile_id(self):
+        if self.profile_id:
+            self._apply_profile_settings()
+
     def action_apply_profile(self):
         self.ensure_one()
         if not self.profile_id:
             raise UserError(_("Please select a mapping profile first."))
+        self._apply_profile_settings()
         return self.action_load_columns()
 
     def action_use_default_profile(self):
@@ -521,6 +698,7 @@ class JtlImportWizard(models.TransientModel):
         if not default_profile:
             raise UserError(_("No default mapping profile was found."))
         self.profile_id = default_profile
+        self._apply_profile_settings()
         return self.action_load_columns()
 
     def action_reset_mapping(self):
@@ -546,6 +724,44 @@ class JtlImportWizard(models.TransientModel):
             self.wizard_step = "review"
         return self._reopen_wizard()
 
+    def _collect_profile_settings_vals(self):
+        """Scalar import settings of the wizard, ready to write onto a profile."""
+        vals = {"category_root_id": self.category_root_id.id or False}
+        for field in PROFILE_SETTING_FIELDS:
+            vals[field] = self[field]
+        return vals
+
+    def _collect_profile_line_commands(self):
+        """(0, 0, {...}) commands describing the current mapping lines."""
+        return [
+            (
+                0,
+                0,
+                {
+                    "sequence": line.sequence,
+                    "source_file_key": line.source_file_key,
+                    "source_column": line.source_column,
+                    "source_column_label": line.source_column_label,
+                    "sample_value": line.sample_value,
+                    "target_model": line.target_model,
+                    "target_field": line.target_field_id.name or line.target_field_name,
+                    "create_field": line.create_field_if_missing,
+                    "new_field_name": line.new_field_name,
+                    "new_field_label": line.new_field_label,
+                    "new_field_type": line.custom_field_ttype,
+                    "relation_model": line.relation_model,
+                    "language_code": (line.language_id.code if line.language_id else line.language_code) or False,
+                    "transform_logic": line.transform_logic,
+                    "required": line.required,
+                    "active": line.active,
+                    "default_value": line.default_value,
+                    "import_enabled": line.import_enabled,
+                },
+            )
+            for line in self.mapping_line_ids
+            if line.target_model and (line.target_field_id or line.target_field_name or line.new_field_name)
+        ]
+
     def _save_profile_from_lines(self):
         self.ensure_one()
         if not self.save_profile:
@@ -553,46 +769,64 @@ class JtlImportWizard(models.TransientModel):
         profile_name = (self.profile_name or "").strip()
         if not profile_name:
             raise UserError(_("Please enter a profile name if you want to save the mapping profile."))
-        profile = self.env["jtl.import.profile"].create(
-            {
-                "name": profile_name,
-                "description": self.profile_description,
-                "company_id": self.env.company.id,
-                "line_ids": [
-                    (
-                        0,
-                        0,
-                        {
-                            "sequence": line.sequence,
-                            "source_file_key": line.source_file_key,
-                            "source_column": line.source_column,
-                            "source_column_label": line.source_column_label,
-                            "sample_value": line.sample_value,
-                            "target_model": line.target_model,
-                            "target_field": line.target_field_id.name or line.target_field_name,
-                            "create_field": line.create_field_if_missing,
-                            "new_field_name": line.new_field_name,
-                            "new_field_label": line.new_field_label,
-                            "new_field_type": line.custom_field_ttype,
-                            "relation_model": line.relation_model,
-                            "language_code": (line.language_id.code if line.language_id else line.language_code) or False,
-                            "transform_logic": line.transform_logic,
-                            "required": line.required,
-                            "active": line.active,
-                            "default_value": line.default_value,
-                            "import_enabled": line.import_enabled,
-                        },
-                    )
-                    for line in self.mapping_line_ids
-                    if line.target_model and (line.target_field_id or line.target_field_name or line.new_field_name)
-                ],
-            }
+        profile_vals = {
+            "name": profile_name,
+            "description": self.profile_description,
+            "company_id": self.env.company.id,
+            "line_ids": self._collect_profile_line_commands(),
+        }
+        profile_vals.update(self._collect_profile_settings_vals())
+        # Reuse an existing profile with the same name instead of piling up
+        # duplicates every time "Save as Profile" is ticked.
+        existing = self.env["jtl.import.profile"].search(
+            [
+                ("name", "=", profile_name),
+                "|",
+                ("company_id", "=", self.env.company.id),
+                ("company_id", "=", False),
+            ],
+            limit=1,
         )
+        if existing:
+            profile_vals["line_ids"] = [(5, 0, 0)] + profile_vals["line_ids"]
+            existing.write(profile_vals)
+            profile = existing
+        else:
+            profile = self.env["jtl.import.profile"].create(profile_vals)
         self.profile_id = profile
         return profile
 
+    def action_update_profile(self):
+        """Write the current wizard settings (and mapping lines, if loaded)
+        back onto the already selected profile."""
+        self.ensure_one()
+        if not self.profile_id:
+            raise UserError(_("Please select a mapping profile to update first."))
+        update_vals = self._collect_profile_settings_vals()
+        if self.profile_description:
+            update_vals["description"] = self.profile_description
+        # Only touch the mapping lines when they have actually been loaded —
+        # otherwise an empty wizard would wipe the profile's mappings.
+        if self.mapping_line_ids:
+            update_vals["line_ids"] = [(5, 0, 0)] + self._collect_profile_line_commands()
+        self.profile_id.write(update_vals)
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Profile updated"),
+                "message": _("Settings%s saved to profile '%s'.")
+                % (_(" and mapping") if self.mapping_line_ids else "", self.profile_id.name),
+                "type": "success",
+                "sticky": False,
+            },
+        }
+
     def _check_required_mapping_aliases(self):
+        present_file_keys = set(self.mapping_line_ids.mapped("source_file_key"))
         for file_key, requirements in REQUIRED_COLUMN_ALIASES.items():
+            if file_key not in present_file_keys:
+                continue
             file_lines = self.mapping_line_ids.filtered(lambda line: line.source_file_key == file_key)
             for alias, label in requirements:
                 matched = file_lines.filtered(
@@ -639,6 +873,99 @@ class JtlImportWizard(models.TransientModel):
         self.mapping_validated = True
         return self._reopen_wizard()
 
+    def _build_assignment_only_preview(self, payload):
+        """For SKUs that only come from assignment files (category / attribute /
+        feature), produce a preview grouped by category path and by attribute
+        name — one log entry per group, not per SKU — so the review step stays
+        readable even for large files.
+
+        Returns (logs, summary, skip_skus): skip_skus are assignment-only SKUs
+        with no matching product. They are removed from the processing list so
+        the import does not walk every row just to skip it."""
+        products = payload.get("products", {}) or {}
+        assignment_keys = {"category", "attribute", "feature"}
+        assignment_only = {
+            sku: record
+            for sku, record in products.items()
+            if record.get("source_file_keys")
+            and set(record["source_file_keys"]).issubset(assignment_keys)
+        }
+        if not assignment_only:
+            return [], "", []
+        existing = self.env["product.product"].search([("default_code", "in", list(assignment_only.keys()))])
+        existing_skus = set(existing.mapped("default_code"))
+        skip_skus = [sku for sku in assignment_only if sku not in existing_skus]
+
+        logs = []
+        summary_parts = []
+
+        # Categories — grouped by path.
+        no_path_label = _("(no category path)")
+        cat_groups = {}
+        for sku, record in assignment_only.items():
+            if "category" not in (record.get("source_file_keys") or []):
+                continue
+            category_path = (record.get("product") or {}).get("category_path") or no_path_label
+            stats = cat_groups.setdefault(category_path, {"total": 0, "matched": 0})
+            stats["total"] += 1
+            if sku in existing_skus:
+                stats["matched"] += 1
+        for category_path, stats in sorted(cat_groups.items()):
+            skipped = stats["total"] - stats["matched"]
+            logs.append({
+                "article_number": False,
+                "field_name": "category_preview",
+                "level": "info" if stats["matched"] else "warning",
+                "message": _(
+                    "Category '%(cat)s': %(total)s SKUs — %(matched)s existing products will be assigned, "
+                    "%(skipped)s have no product yet (skipped)."
+                ) % {"cat": category_path, "total": stats["total"], "matched": stats["matched"], "skipped": skipped},
+            })
+        if cat_groups:
+            cat_total = sum(s["total"] for s in cat_groups.values())
+            cat_matched = sum(s["matched"] for s in cat_groups.values())
+            summary_parts.append(_(
+                "Category file: %(total)s SKUs across %(groups)s categories — %(matched)s assigned, %(skipped)s skipped."
+            ) % {"total": cat_total, "groups": len(cat_groups), "matched": cat_matched, "skipped": cat_total - cat_matched})
+
+        # Attributes / features — grouped by attribute name.
+        attr_groups = {}
+        for sku, record in assignment_only.items():
+            for attr in record.get("attributes") or []:
+                name = (attr.get("name") or "").strip()
+                if not name:
+                    continue
+                stats = attr_groups.setdefault(name, {"total": set(), "matched": set()})
+                stats["total"].add(sku)
+                if sku in existing_skus:
+                    stats["matched"].add(sku)
+        for name, stats in sorted(attr_groups.items()):
+            total = len(stats["total"])
+            matched = len(stats["matched"])
+            logs.append({
+                "article_number": False,
+                "field_name": "attribute_preview",
+                "level": "info" if matched else "warning",
+                "message": _(
+                    "Attribute/feature '%(name)s': %(total)s SKUs — %(matched)s existing products will get it, "
+                    "%(skipped)s have no product yet (skipped)."
+                ) % {"name": name, "total": total, "matched": matched, "skipped": total - matched},
+            })
+        if attr_groups:
+            attr_skus = {sku for stats in attr_groups.values() for sku in stats["total"]}
+            attr_matched = {sku for stats in attr_groups.values() for sku in stats["matched"]}
+            summary_parts.append(_(
+                "Attribute/feature files: %(names)s distinct attributes across %(total)s SKUs — "
+                "%(matched)s SKUs matched, %(skipped)s skipped."
+            ) % {
+                "names": len(attr_groups),
+                "total": len(attr_skus),
+                "matched": len(attr_matched),
+                "skipped": len(attr_skus) - len(attr_matched),
+            })
+
+        return logs, "\n".join(summary_parts), skip_skus
+
     def action_validate(self):
         self.ensure_one()
         self._run_module_precheck()
@@ -665,20 +992,51 @@ class JtlImportWizard(models.TransientModel):
                 "import_gallery_images": self.import_gallery_images,
                 "import_seo": self.import_seo,
                 "barcode_match_update": self.barcode_match_update,
+                "manufacturer_create_brand": self.manufacturer_create_brand,
+                "category_import_mode": self.category_import_mode,
+                "import_limit": self.import_limit,
                 "category_root_id": self.category_root_id.id if self.category_root_id else False,
             }
         )
         run.set_source_bundle(file_specs)
         payload = self.env["jtl.import.parser"].parse_import_bundle(run, file_specs, mapping_specs=mapping_specs)
+        parsed_sku_count = len(payload.get("skus", []))
+        assignment_preview_logs, assignment_summary, skip_skus = self._build_assignment_only_preview(payload)
+        # Drop assignment-only SKUs (category / attribute / feature) without a
+        # matching product from the processing list — the category hierarchy is
+        # built separately and attributes can only attach to existing products,
+        # so there is no reason to walk these rows batch by batch.
+        if skip_skus:
+            skip_set = set(skip_skus)
+            payload["skus"] = [sku for sku in payload.get("skus", []) if sku not in skip_set]
+            for sku in skip_set:
+                payload.get("products", {}).pop(sku, None)
+        # Optional import limit — keep only the first N articles (for test runs).
+        limit_note = ""
+        if self.import_limit and self.import_limit > 0:
+            kept = payload.get("skus", [])[: self.import_limit]
+            if len(kept) < len(payload.get("skus", [])):
+                dropped = set(payload.get("skus", [])) - set(kept)
+                for sku in dropped:
+                    payload.get("products", {}).pop(sku, None)
+                limit_note = _("Import limit active: only the first %s articles are imported.") % self.import_limit
+            payload["skus"] = kept
         run.set_payload(payload)
+        validation_message = _("%s product groups from %s file(s) are staged and ready for queueing.") % (parsed_sku_count, len(file_specs))
+        if assignment_summary:
+            validation_message = "%s\n%s" % (validation_message, assignment_summary)
+        if limit_note:
+            validation_message = "%s\n%s" % (validation_message, limit_note)
         run.write(
             {
                 "state": "validated",
-                "validation_message": _("%s product groups from %s file(s) are staged and ready for queueing.") % (len(payload.get("skus", [])), len(file_specs)),
+                "validation_message": validation_message,
             }
         )
         if payload.get("warnings"):
             run._append_logs(payload["warnings"])
+        if assignment_preview_logs:
+            run._append_logs(assignment_preview_logs)
         return {"type": "ir.actions.act_window", "name": _("JTL Import Run"), "res_model": "jtl.import.run", "res_id": run.id, "view_mode": "form", "target": "current"}
 
     def action_validate_and_queue(self):
@@ -727,7 +1085,7 @@ class JtlImportWizardLine(models.TransientModel):
     default_value = fields.Char()
     field_required = fields.Boolean(compute="_compute_field_metadata")
     target_field_ttype = fields.Char(compute="_compute_field_metadata")
-    status = fields.Selection([("valid", "Valid"), ("warning", "Warning"), ("error", "Error"), ("ignored", "Ignored")], compute="_compute_status")
+    status = fields.Selection([("valid", "Valid"), ("warning", "Warning"), ("error", "Error"), ("ignored", "Ignored"), ("reserved", "Ready")], compute="_compute_status")
     note = fields.Char(compute="_compute_status")
 
     @api.depends("source_file_key")
@@ -823,12 +1181,11 @@ class JtlImportWizardLine(models.TransientModel):
     def _compute_status(self):
         for line in self:
             if line.is_reserved:
-                line.status = "ignored"
+                line.status = "reserved"
                 normalized_key = normalize_header_key(line.source_column_label or line.source_column)
-                line.note = RESERVED_COLUMN_KEYS.get(
-                    normalized_key,
-                    _("Reserved — used internally, not imported"),
-                )
+                line.note = get_reserved_column_note(
+                    normalized_key, line.source_file_key, line.source_column_label or line.source_column
+                ) or _("Reserved — used internally, not imported")
             elif not line.active or not line.import_enabled:
                 line.status = "ignored"
                 line.note = _("Ignored")

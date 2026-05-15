@@ -27,6 +27,29 @@ class JtlImportProfile(models.Model):
     company_id = fields.Many2one("res.company", default=lambda self: self.env.company)
     line_ids = fields.One2many("jtl.import.profile.line", "profile_id", string="Mappings", copy=True)
 
+    # Import settings stored alongside the mapping so applying a profile also
+    # restores the run options (Root Category, batch size, toggles, ...).
+    batch_size = fields.Integer(default=200)
+    import_stock = fields.Boolean(default=False)
+    import_images = fields.Boolean(default=True)
+    import_gallery_images = fields.Boolean(default=False)
+    import_seo = fields.Boolean(default=False)
+    barcode_match_update = fields.Boolean(default=True)
+    update_existing_only = fields.Boolean(default=False)
+    dry_run = fields.Boolean(default=False)
+    manufacturer_create_brand = fields.Boolean(default=False, string="Hersteller als Marke importieren")
+    category_import_mode = fields.Selection(
+        [
+            ("both", "Lager- und E-Commerce-Kategorien"),
+            ("inventory", "Nur Lagerkategorien"),
+            ("ecommerce", "Nur E-Commerce-Kategorien"),
+        ],
+        string="Kategorien importieren als",
+        default="both",
+        required=True,
+    )
+    category_root_id = fields.Many2one("product.category", string="Root Category")
+
     def action_duplicate_profile(self):
         self.ensure_one()
         duplicate = self.copy(default={"name": "%s (Copy)" % self.name, "is_default": False})
